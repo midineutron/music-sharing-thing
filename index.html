@@ -90,16 +90,17 @@
 
     /* Main content */
     #room-main { flex: 1; overflow: hidden; position: relative; }
-    .panel { position: absolute; inset: 0; overflow-y: auto; display: none; padding: 12px; }
+    .panel { position: absolute; inset: 0; overflow-y: auto; display: none; padding: 12px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
     .panel.active { display: block; }
 
     /* Player bar */
     #player-bar {
-      flex-shrink: 0; height: var(--player-h);
+      flex-shrink: 0;
       background: var(--surface); border-top: 1px solid var(--border);
-      display: flex; align-items: center; padding: 0 10px; gap: 10px;
+      display: flex; flex-direction: column; padding-bottom: 10px;
     }
     #player-bar.hidden { display: none; }
+    .pb-main { display: flex; align-items: center; padding: 8px 10px 4px; gap: 10px; }
     .pb-thumb { width: 52px; height: 39px; border-radius: 5px; object-fit: cover; flex-shrink: 0; background: var(--surface2); }
     .pb-info { flex: 1; min-width: 0; }
     #pb-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -109,6 +110,25 @@
     .pb-btn:hover { background: var(--surface2); }
     #pb-playpause { background: var(--primary); color: #000; font-size: 16px; font-weight: 700; }
     #pb-playpause:hover { opacity: 0.85; background: var(--primary); }
+
+    /* Progress / seek bar */
+    .pb-progress-row { display: flex; align-items: center; gap: 8px; padding: 0 12px; }
+    .pb-time { font-size: 11px; color: var(--text-muted); min-width: 30px; font-variant-numeric: tabular-nums; font-family: monospace; flex-shrink: 0; }
+    #pb-time-dur { text-align: right; }
+    #pb-seekbar {
+      flex: 1; height: 4px; background: var(--border); border-radius: 2px;
+      position: relative; cursor: pointer;
+      /* expanded tap/click target */
+      padding: 10px 0; margin: -10px 0; box-sizing: content-box;
+    }
+    #pb-seekbar-track { height: 4px; border-radius: 2px; background: var(--border); position: relative; overflow: visible; }
+    #pb-fill { height: 4px; background: var(--primary); border-radius: 2px; width: 0%; pointer-events: none; }
+    #pb-handle {
+      position: absolute; top: 50%; transform: translate(-50%, -50%);
+      width: 13px; height: 13px; border-radius: 50%; background: var(--primary);
+      left: 0%; opacity: 0; transition: opacity 0.15s; pointer-events: none;
+    }
+    #pb-seekbar:hover #pb-handle { opacity: 1; }
 
     /* Tab bar (mobile) */
     #tab-bar { flex-shrink: 0; height: var(--tabbar-h); background: var(--surface); border-top: 1px solid var(--border); display: flex; }
@@ -293,7 +313,7 @@
     <div id="panel-search" class="panel active">
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
-        <input id="search-input" type="text" placeholder="Search for music…" autocomplete="off" autocorrect="off">
+        <input id="search-input" type="search" placeholder="Search… (press Enter)" autocomplete="off" autocorrect="off" autocapitalize="off">
       </div>
       <div id="search-results">
         <div class="hint-box">
@@ -342,15 +362,27 @@
 
   <!-- Player bar -->
   <div id="player-bar" class="hidden">
-    <img class="pb-thumb" id="pb-thumb" src="" alt="">
-    <div class="pb-info">
-      <div id="pb-title">—</div>
-      <div id="pb-artist">—</div>
+    <div class="pb-main">
+      <img class="pb-thumb" id="pb-thumb" src="" alt="">
+      <div class="pb-info">
+        <div id="pb-title">—</div>
+        <div id="pb-artist">—</div>
+      </div>
+      <div class="pb-controls">
+        <button class="pb-btn" id="pb-prev" title="Previous">⏮</button>
+        <button class="pb-btn" id="pb-playpause" title="Play / Pause">▶</button>
+        <button class="pb-btn" id="pb-next" title="Next">⏭</button>
+      </div>
     </div>
-    <div class="pb-controls">
-      <button class="pb-btn" id="pb-prev" title="Previous">⏮</button>
-      <button class="pb-btn" id="pb-playpause" title="Play / Pause">▶</button>
-      <button class="pb-btn" id="pb-next" title="Next">⏭</button>
+    <div class="pb-progress-row">
+      <span class="pb-time" id="pb-time-cur">0:00</span>
+      <div id="pb-seekbar">
+        <div id="pb-seekbar-track">
+          <div id="pb-fill"></div>
+          <div id="pb-handle"></div>
+        </div>
+      </div>
+      <span class="pb-time" id="pb-time-dur">0:00</span>
     </div>
   </div>
 
@@ -473,19 +505,57 @@ window.onYouTubeIframeAPIReady = function () {
 };
 
 function onYTState(e) {
-  if (e.data === YT.PlayerState.ENDED) { advanceQueue(); return; }
+  if (e.data === YT.PlayerState.ENDED) { _stopProgress(); advanceQueue(); return; }
   state.isPlaying = (e.data === YT.PlayerState.PLAYING);
+  if (state.isPlaying) _startProgress(); else _stopProgress();
   _updatePPBtn();
 }
 function _ytLoad(videoId) { if (ytReady && ytPlayer) ytPlayer.loadVideoById(videoId); }
 function _updatePPBtn() { document.getElementById('pb-playpause').textContent = state.isPlaying ? '⏸' : '▶'; }
 
+/* -- Progress bar -- */
+let _progressTimer = null;
+
+function _startProgress() {
+  clearInterval(_progressTimer);
+  _progressTimer = setInterval(_tickProgress, 500);
+}
+function _stopProgress() {
+  clearInterval(_progressTimer);
+  _progressTimer = null;
+}
+function _tickProgress() {
+  if (!ytReady || !ytPlayer) return;
+  try {
+    const cur = ytPlayer.getCurrentTime() || 0;
+    const dur = ytPlayer.getDuration()    || 0;
+    if (!dur) return;
+    const pct = Math.min(100, (cur / dur) * 100);
+    document.getElementById('pb-fill').style.width  = pct + '%';
+    document.getElementById('pb-handle').style.left = pct + '%';
+    document.getElementById('pb-time-cur').textContent = _fmt(cur);
+    document.getElementById('pb-time-dur').textContent = _fmt(dur);
+  } catch (_) {}
+}
+function _fmt(sec) {
+  const s = Math.floor(sec);
+  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+}
+function _resetProgress() {
+  document.getElementById('pb-fill').style.width    = '0%';
+  document.getElementById('pb-handle').style.left   = '0%';
+  document.getElementById('pb-time-cur').textContent = '0:00';
+  document.getElementById('pb-time-dur').textContent = '0:00';
+}
+
 function playSong(song, qtype) {
   state.currentSong  = song;
   state.currentQtype = qtype;
+  _resetProgress();
   _ytLoad(song.youtubeVideoId);
   state.isPlaying = true;
   _updatePPBtn();
+  _startProgress();
   document.getElementById('player-bar').classList.remove('hidden');
   document.getElementById('pb-thumb').src              = song.thumbnail || '';
   document.getElementById('pb-title').textContent      = song.title || '';
@@ -788,19 +858,92 @@ function deleteSong(songId, qtype) {
 /* =============================================================
    YOUTUBE SEARCH
 ============================================================= */
-let _searchTimer;
+/* -- YouTube URL detection -- */
+function extractYouTubeId(str) {
+  try {
+    const url = new URL(str.trim());
+    if (url.hostname.includes('youtube.com')) {
+      const v = url.searchParams.get('v');
+      if (v && v.length === 11) return v;
+      const m = url.pathname.match(/\/(embed|shorts|v|live)\/([a-zA-Z0-9_-]{11})/);
+      if (m) return m[2];
+    }
+    if (url.hostname === 'youtu.be') {
+      const id = url.pathname.slice(1).split(/[/?]/)[0];
+      if (id.length === 11) return id;
+    }
+  } catch (_) {}
+  return null;
+}
 
-function initSearch() {
-  const inp = document.getElementById('search-input');
-  inp.addEventListener('input', () => {
-    const q = inp.value.trim();
-    clearTimeout(_searchTimer);
-    if (!q) {
-      document.getElementById('search-results').innerHTML =
-        `<div class="hint-box"><div class="hi">🎵</div><p>Search for a song, then choose<br>the room queue or a person to send it to</p></div>`;
+async function handleYouTubeUrl(videoId) {
+  const el = document.getElementById('search-results');
+  // Show instantly with CDN thumbnail while we fetch metadata
+  const cdnThumb = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+  const tempSong = { youtubeVideoId: videoId, title: '…', artist: '', thumbnail: cdnThumb };
+  el.innerHTML = _resultCardHtml(tempSong);
+  el.querySelector('.result-card').addEventListener('click', () => openDestPicker(tempSong));
+
+  // Fetch real title + channel from videos.list (1 quota unit)
+  if (YOUTUBE_API_KEY === 'YOUR_YOUTUBE_API_KEY') return;
+  try {
+    const url = new URL('https://www.googleapis.com/youtube/v3/videos');
+    url.searchParams.set('part', 'snippet');
+    url.searchParams.set('id', videoId);
+    url.searchParams.set('key', YOUTUBE_API_KEY);
+    const res  = await fetch(url.toString());
+    const data = await res.json();
+    const item = data.items?.[0];
+    if (!item) {
+      el.innerHTML = `<div class="hint-box"><div class="hi">⚠️</div><p>Video not found or is private.</p></div>`;
       return;
     }
-    _searchTimer = setTimeout(() => doSearch(q), 300);
+    const s    = item.snippet;
+    const song = {
+      youtubeVideoId: videoId,
+      title:          s.title,
+      artist:         s.channelTitle,
+      thumbnail:      s.thumbnails?.medium?.url || cdnThumb,
+    };
+    el.innerHTML = _resultCardHtml(song);
+    el.querySelector('.result-card').addEventListener('click', () => openDestPicker(song));
+  } catch (e) { console.error(e); /* keep showing the CDN-thumbnail card */ }
+}
+
+function _resultCardHtml(song) {
+  return `<div class="result-card" data-vid="${esc(song.youtubeVideoId)}">
+    <img class="result-thumb" src="${esc(song.thumbnail)}" alt="" loading="lazy">
+    <div class="result-info">
+      <div class="result-title">${esc(song.title)}</div>
+      <div class="result-ch">${esc(song.artist)}</div>
+    </div>
+    <button class="add-btn" title="Add…">+</button>
+  </div>`;
+}
+
+function initSearch() {
+  const inp     = document.getElementById('search-input');
+  const resultsEl = document.getElementById('search-results');
+  const hint    = `<div class="hint-box"><div class="hi">🎵</div><p>Search for a song, then choose<br>the room queue or a person to send it to</p></div>`;
+
+  // On input: only handle YouTube URL pastes (free — no API call)
+  inp.addEventListener('input', () => {
+    const q = inp.value.trim();
+    if (!q) { resultsEl.innerHTML = hint; return; }
+    const ytId = extractYouTubeId(q);
+    if (ytId) handleYouTubeUrl(ytId);
+    // Otherwise: do nothing — wait for Enter
+  });
+
+  // Search fires on Enter only
+  inp.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const q = inp.value.trim();
+    if (!q) return;
+    const ytId = extractYouTubeId(q);
+    if (ytId) { handleYouTubeUrl(ytId); return; }
+    doSearch(q);
   });
 }
 
@@ -836,27 +979,17 @@ async function doSearch(query) {
       return;
     }
 
-    el.innerHTML = items.map(item => {
-      const vid   = item.id.videoId;
-      const s     = item.snippet;
-      const thumb = s.thumbnails?.medium?.url || s.thumbnails?.default?.url || '';
-      return `<div class="result-card" data-vid="${esc(vid)}" data-title="${esc(s.title)}" data-ch="${esc(s.channelTitle)}" data-thumb="${esc(thumb)}">
-        <img class="result-thumb" src="${esc(thumb)}" alt="" loading="lazy">
-        <div class="result-info">
-          <div class="result-title">${esc(s.title)}</div>
-          <div class="result-ch">${esc(s.channelTitle)}</div>
-        </div>
-        <button class="add-btn" title="Add…">+</button>
-      </div>`;
-    }).join('');
+    const songs = items.map(item => ({
+      youtubeVideoId: item.id.videoId,
+      title:          item.snippet.title,
+      artist:         item.snippet.channelTitle,
+      thumbnail:      item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || '',
+    }));
 
-    el.querySelectorAll('.result-card').forEach(card => {
-      card.addEventListener('click', () => openDestPicker({
-        youtubeVideoId: card.dataset.vid,
-        title:          card.dataset.title,
-        artist:         card.dataset.ch,
-        thumbnail:      card.dataset.thumb,
-      }));
+    el.innerHTML = songs.map(_resultCardHtml).join('');
+
+    el.querySelectorAll('.result-card').forEach((card, i) => {
+      card.addEventListener('click', () => openDestPicker(songs[i]));
     });
 
   } catch (e) {
@@ -1030,6 +1163,27 @@ function bindEvents() {
   });
   document.getElementById('modal-bd').addEventListener('click', closeDestModal);
   document.getElementById('modal-cancel').addEventListener('click', closeDestModal);
+
+  // Seekbar — click to seek
+  const seekbar = document.getElementById('pb-seekbar');
+  function _seek(e) {
+    if (!ytReady || !ytPlayer) return;
+    const rect = seekbar.getBoundingClientRect();
+    const pct  = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const dur  = ytPlayer.getDuration() || 0;
+    if (!dur) return;
+    ytPlayer.seekTo(pct * dur, true);
+    // Snap the UI immediately
+    document.getElementById('pb-fill').style.width    = (pct * 100) + '%';
+    document.getElementById('pb-handle').style.left   = (pct * 100) + '%';
+    document.getElementById('pb-time-cur').textContent = _fmt(pct * dur);
+  }
+  seekbar.addEventListener('click', _seek);
+  // Touch seek support
+  seekbar.addEventListener('touchmove', e => {
+    e.preventDefault();
+    _seek(e.touches[0]);
+  }, { passive: false });
 
   // Player controls
   document.getElementById('pb-playpause').addEventListener('click', () => {
