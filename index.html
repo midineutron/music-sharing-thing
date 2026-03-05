@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>MusicQ – Collaborative Music Queue</title>
   <style>
     /* ============================================================
@@ -950,30 +950,74 @@ async function handleBandcampUrl(bcUrl) {
   const el = document.getElementById('search-results');
   el.innerHTML = `<div class="spinner-wrap"><div class="spinner"></div>Loading Bandcamp track…</div>`;
   try {
-    const res  = await fetch(`https://bandcamp.com/api/oembed?url=${encodeURIComponent(bcUrl)}&format=json`);
-    if (!res.ok) throw new Error('oEmbed failed');
-    const data = await res.json();
+    // Fetch the track page via CORS proxy (Bandcamp oEmbed API is defunct)
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(bcUrl)}`;
+    const res = await fetch(proxyUrl);
+    if (!res.ok) throw new Error('proxy failed');
+    const json = await res.json();
+    const html = json.contents;
+    if (!html) throw new Error('no content from proxy');
+
+    let title = '', artist = '', thumbnail = '', trackId = '';
+
+    // --- Primary: extract from Schema.org JSON-LD ---
+    const ldMatch = html.match(/<script[^>]+type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/i);
+    if (ldMatch) {
+      try {
+        let ld = JSON.parse(ldMatch[1]);
+        if (Array.isArray(ld)) ld = ld.find(x => x['@type'] === 'MusicRecording') || ld[0];
+        title     = ld.name || '';
+        artist    = ld.byArtist?.name || '';
+        const img = ld.image;
+        thumbnail = Array.isArray(img) ? img[0]
+                  : (typeof img === 'string' ? img : (img?.url || ''));
+
+        // Attempt A: numeric segment in @id URL (e.g. ".../track/2867340634")
+        const atId = ld['@id'] || '';
+        const numInId = atId.match(/\/(\d{6,12})(?:\/|$)/);
+        if (numInId) trackId = numInId[1];
+
+        // Attempt B: well-known ID field names inside the raw JSON-LD string
+        if (!trackId) {
+          const m = ldMatch[1].match(/"(?:track_id|item_id|tralbum_id)"\s*:\s*(\d{6,12})/i);
+          if (m) trackId = m[1];
+        }
+      } catch (_) {}
+    }
+
+    // --- Fallback A: <meta> tags Bandcamp sometimes emits ---
+    if (!trackId) {
+      const m = html.match(/bc:page:properties:track_id["'][^>]*content=["'](\d+)["']/)
+             || html.match(/content=["'](\d+)["'][^>]*bc:page:properties:track_id/);
+      if (m) trackId = m[1];
+    }
+
+    // --- Fallback B: inline JS variables anywhere in page HTML ---
+    if (!trackId) {
+      const m = html.match(/"(?:track_id|item_id|tralbum_id)"\s*:\s*(\d{6,12})/)
+             || html.match(/["'](?:track_id|item_id|tralbum_id)["']\s*:\s*(\d{6,12})/)
+             || html.match(/"id"\s*:\s*(\d{9,12})/);   // ≥9 digits = likely track id
+      if (m) trackId = m[1];
+    }
+
+    if (!trackId) throw new Error('track ID not found in page');
+
+    const bcEmbedSrc = `https://bandcamp.com/EmbeddedPlayer/track=${trackId}/size=small/bgcol=111113/linkcol=30d158/transparent=true/`;
     const song = {
-      source:        'bandcamp',
-      bandcampUrl:   bcUrl,
-      bcEmbedSrc:    _extractBcEmbedSrc(data.html),
-      youtubeVideoId:'',
-      title:         data.title  || 'Unknown Track',
-      artist:        data.artist || '',
-      thumbnail:     data.thumbnail_url || '',
+      source:         'bandcamp',
+      bandcampUrl:    bcUrl,
+      bcEmbedSrc,
+      youtubeVideoId: '',
+      title:          title || 'Unknown Track',
+      artist:         artist || '',
+      thumbnail:      thumbnail || '',
     };
     el.innerHTML = _resultCardHtml(song);
     el.querySelector('.result-card').addEventListener('click', () => openDestPicker(song));
   } catch (e) {
-    console.error('Bandcamp oEmbed:', e);
+    console.error('Bandcamp load:', e);
     el.innerHTML = `<div class="hint-box"><div class="hi">⚠️</div><p>Couldn't load that Bandcamp track.<br>Make sure it's a public track URL.</p></div>`;
   }
-}
-
-function _extractBcEmbedSrc(html) {
-  if (!html) return '';
-  const m = html.match(/src="([^"]*bandcamp\.com\/EmbeddedPlayer[^"]*)"/);
-  return m ? m[1] : '';
 }
 
 function _loadBandcampEmbed(song) {
@@ -1022,23 +1066,30 @@ function _ensureAudioAlive() {
   if (!_bgAudio) {
     _bgAudio = document.getElementById('bg-audio');
     if (_bgAudio && !_bgAudio.src) {
-      // Build a 100 ms silent WAV at 8 kHz / 16-bit / mono entirely in JS.
-      // No hardcoded base64 — generated at runtime so it's always valid.
-      const sr = 8000, n = 800;                   // 100 ms of silence
+      // Build a 1-second WAV at 8 kHz / 16-bit / mono with a subsonic tone.
+      // CRITICAL: must be non-zero audio. iOS detects all-zero (silent) WAVs
+      // and suspends the audio session, which kills the YouTube iframe too.
+      // A 10 Hz sine wave is below human hearing so it is inaudible, but its
+      // non-zero samples prevent iOS from treating the session as silent.
+      const sr = 8000, n = 8000;                  // 1 second at 8 kHz
       const ab  = new ArrayBuffer(44 + n * 2);
       const dv  = new DataView(ab);
       const w4  = (o, s) => [0,1,2,3].forEach(i => dv.setUint8(o + i, s.charCodeAt(i)));
       w4(0, 'RIFF'); dv.setUint32(4,  36 + n * 2, true);
       w4(8, 'WAVE'); w4(12, 'fmt ');
-      dv.setUint32(16, 16, true);   // fmt chunk size
+      dv.setUint32(16, 16, true);
       dv.setUint16(20,  1, true);   // PCM
       dv.setUint16(22,  1, true);   // mono
-      dv.setUint32(24, sr, true);   // sample rate
-      dv.setUint32(28, sr * 2, true); // byte rate (16-bit)
-      dv.setUint16(32,  2, true);   // block align
-      dv.setUint16(34, 16, true);   // bits per sample
+      dv.setUint32(24, sr, true);
+      dv.setUint32(28, sr * 2, true);
+      dv.setUint16(32,  2, true);
+      dv.setUint16(34, 16, true);
       w4(36, 'data'); dv.setUint32(40, n * 2, true);
-      // Remaining bytes are already zero-filled → silence
+      // 10 Hz subsonic tone at 1% amplitude — inaudible but non-zero
+      for (let i = 0; i < n; i++) {
+        dv.setInt16(44 + i * 2,
+          Math.round(0.01 * 32767 * Math.sin(2 * Math.PI * 10 * i / sr)), true);
+      }
       _bgAudio.src = URL.createObjectURL(new Blob([ab], { type: 'audio/wav' }));
     }
     if (_bgAudio) _bgAudio.play().catch(() => {});
@@ -1077,6 +1128,7 @@ function _updateMediaSession(song) {
         ? [{ src: song.thumbnail, sizes: '320x180', type: 'image/jpeg' }]
         : [],
     });
+    navigator.mediaSession.playbackState = 'playing';
     navigator.mediaSession.setActionHandler('play', () => {
       if (ytReady && ytPlayer) { ytPlayer.playVideo();  state.isPlaying = true;  _updatePPBtn(); }
     });
