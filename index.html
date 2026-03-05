@@ -272,6 +272,53 @@
     .sheet-cancel:hover { opacity: 0.8; }
 
     /* ============================================================
+       PLAYLIST CARD
+    ============================================================ */
+    .playlist-card { background: var(--surface); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; margin-bottom: 8px; }
+    .playlist-card-top { display: flex; align-items: center; gap: 12px; padding: 12px; }
+    .playlist-thumb { width: 80px; height: 60px; object-fit: cover; border-radius: 8px; flex-shrink: 0; background: var(--surface2); }
+    .playlist-info { flex: 1; min-width: 0; }
+    .playlist-title { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
+    .playlist-meta { font-size: 12px; color: var(--text-muted); }
+    .playlist-btns { display: flex; gap: 8px; padding: 0 12px 12px; }
+    .pl-btn { flex: 1; padding: 9px 8px; border-radius: 10px; font-size: 13px; font-weight: 600; transition: opacity 0.15s; cursor: pointer; }
+    .pl-btn.room { background: var(--primary); color: #000; }
+    .pl-btn.mine { background: var(--surface2); color: var(--text); }
+    .pl-btn:hover:not(:disabled) { opacity: 0.82; }
+    .pl-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* ============================================================
+       ROOM SYNC / LIVE MODE
+    ============================================================ */
+    #room-sync-btn {
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      width: 100%; padding: 7px 12px; margin-bottom: 10px;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.4px;
+      background: var(--surface2); color: var(--text-muted);
+      border: 1.5px solid var(--border); border-radius: 20px;
+      transition: all 0.15s;
+    }
+    #room-sync-btn:hover { border-color: var(--text-muted); }
+    #room-sync-btn.live {
+      background: rgba(255,69,58,0.1); color: #ff453a; border-color: #ff453a;
+    }
+    .sync-dot {
+      width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0;
+    }
+    #room-sync-btn.live .sync-dot { animation: pulse-dot 1.4s ease-in-out infinite; }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; } 50% { opacity: 0.35; }
+    }
+    /* LIVE badge inside player bar title row */
+    #pb-live-badge {
+      display: none; font-size: 9px; font-weight: 800; letter-spacing: 0.5px;
+      background: rgba(255,69,58,0.18); color: #ff453a;
+      border-radius: 4px; padding: 1px 5px; margin-left: 5px;
+      vertical-align: middle;
+    }
+    #pb-live-badge.show { display: inline; }
+
+    /* ============================================================
        TOAST
     ============================================================ */
     #toast {
@@ -372,6 +419,9 @@
 
       <!-- Room queue content -->
       <div id="qt-room">
+        <button id="room-sync-btn" title="Sync playback with the room — everyone hears the same song">
+          <span class="sync-dot"></span> LIVE — join room sync
+        </button>
         <div id="q-unlistened"></div>
         <div id="q-listened-section" style="display:none">
           <div class="section-label">Listened</div>
@@ -404,7 +454,7 @@
     <div class="pb-main">
       <img class="pb-thumb" id="pb-thumb" src="" alt="">
       <div class="pb-info">
-        <div id="pb-title">—</div>
+        <div id="pb-title">—<span id="pb-live-badge">LIVE</span></div>
         <div id="pb-artist">—</div>
       </div>
       <div class="pb-controls">
@@ -528,6 +578,9 @@ const state = {
   activeTab:     'search',
   activeQueueTab:'room', // 'room' | 'mine'
   pendingSong:   null,
+  // Room sync
+  roomSyncOn:   false, // whether this client is following room sync
+  roomSyncData: null,  // latest snapshot from rooms/{roomId}/sync
 };
 
 let sortableRoom = null;
@@ -640,6 +693,15 @@ function playSong(song, qtype) {
 }
 
 function advanceQueue() {
+  // In room-sync mode: broadcast the next room-queue song to everyone
+  if (state.roomSyncOn) {
+    const list = _unlistened('room');
+    if (!list.length) return;
+    const idx  = state.currentSong ? list.findIndex(s => s._id === state.currentSong._id) : -1;
+    const next = list[idx + 1];
+    if (next) { markListened(next._id, 'room'); _roomSyncSetSong(next); }
+    return;
+  }
   const list = _unlistened(state.currentQtype);
   if (!list.length) return;
   const idx  = state.currentSong ? list.findIndex(s => s._id === state.currentSong._id) : -1;
@@ -648,6 +710,14 @@ function advanceQueue() {
 }
 
 function _prevSong() {
+  if (state.roomSyncOn) {
+    const list = _unlistened('room');
+    if (!list.length) return;
+    const idx  = state.currentSong ? list.findIndex(s => s._id === state.currentSong._id) : 1;
+    const prev = list[Math.max(0, idx - 1)];
+    if (prev) _roomSyncSetSong(prev);
+    return;
+  }
   const list = _unlistened(state.currentQtype);
   if (!list.length) return;
   const idx  = state.currentSong ? list.findIndex(s => s._id === state.currentSong._id) : 1;
@@ -775,6 +845,7 @@ function enterRoom() {
   document.getElementById('share-room-id').textContent = state.roomId;
   setupUsersListener();
   setupQueueListeners();
+  setupSyncListener();
 }
 
 /* =============================================================
@@ -798,6 +869,121 @@ function setupQueueListeners() {
     state.personalQueue = snap.val() || {};
     renderQueues();
   });
+}
+
+/* =============================================================
+   ROOM SYNC
+   Data model: rooms/{roomId}/sync = { song, playing, startedAt, positionAtStart }
+   startedAt   — server timestamp of when play was last pressed
+   positionAtStart — track position (seconds) when play was pressed
+   Current position = positionAtStart + (now - startedAt)/1000   [when playing]
+                    = positionAtStart                              [when paused]
+============================================================= */
+function setupSyncListener() {
+  db.ref(`rooms/${state.roomId}/sync`).on('value', snap => {
+    state.roomSyncData = snap.val();
+    if (state.roomSyncOn) _applyRoomSync(state.roomSyncData);
+  });
+}
+
+function _roomSyncToggle() {
+  state.roomSyncOn = !state.roomSyncOn;
+  _renderSyncBtn();
+  if (state.roomSyncOn) {
+    toast('🔴 Joined room sync');
+    _applyRoomSync(state.roomSyncData);
+  } else {
+    toast('Disconnected from room sync');
+    _setLiveBadge(false);
+  }
+}
+
+function _renderSyncBtn() {
+  const btn = document.getElementById('room-sync-btn');
+  if (!btn) return;
+  btn.classList.toggle('live', state.roomSyncOn);
+  btn.innerHTML = state.roomSyncOn
+    ? '<span class="sync-dot"></span> LIVE — tap to disconnect'
+    : '<span class="sync-dot"></span> LIVE — join room sync';
+}
+
+function _setLiveBadge(show) {
+  document.getElementById('pb-live-badge')?.classList.toggle('show', show);
+}
+
+// Write a new current song + reset playback to the room sync node.
+function _roomSyncSetSong(song) {
+  const clean = Object.assign({}, song); delete clean._id;
+  db.ref(`rooms/${state.roomId}/sync`).set({
+    song: clean, playing: true, startedAt: SV.TIMESTAMP, positionAtStart: 0,
+  }).catch(console.error);
+  // Apply locally without waiting for the roundtrip so it feels instant
+  _syncLoadSong(song, true, 0, 0);
+}
+
+// Write a play/pause change to the room sync node.
+function _roomSyncSetPlaying(playing) {
+  const pos = (ytReady && ytPlayer) ? (ytPlayer.getCurrentTime() || 0) : 0;
+  const upd = playing
+    ? { playing: true,  startedAt: SV.TIMESTAMP, positionAtStart: pos }
+    : { playing: false, positionAtStart: pos };
+  db.ref(`rooms/${state.roomId}/sync`).update(upd).catch(console.error);
+}
+
+// Apply a Firebase sync snapshot to the local player.
+function _applyRoomSync(sync) {
+  if (!sync?.song) return;
+  const song     = sync.song;
+  const newSong  = state.currentSong?.youtubeVideoId !== song.youtubeVideoId
+                || state.currentSong?.bcEmbedSrc      !== song.bcEmbedSrc;
+  const elapsed  = Math.max(0, (Date.now() - (sync.startedAt || Date.now())) / 1000);
+  const targetPos = (sync.positionAtStart || 0) + (sync.playing ? elapsed : 0);
+  _syncLoadSong(song, sync.playing, newSong ? 0 : targetPos, newSong ? targetPos : 0);
+}
+
+// Internal: load/seek/play a song for room sync, with optional deferred seek for new loads.
+function _syncLoadSong(song, shouldPlay, immediateSeek, deferredSeek) {
+  const newSong = state.currentSong?.youtubeVideoId !== song.youtubeVideoId
+               || state.currentSong?.bcEmbedSrc      !== song.bcEmbedSrc;
+
+  state.currentSong  = song;
+  state.currentQtype = 'room';
+  document.getElementById('player-bar').classList.remove('hidden');
+  document.getElementById('pb-thumb').src          = song.thumbnail || '';
+  document.getElementById('pb-title').textContent  = song.title    || '';
+  document.getElementById('pb-artist').textContent = song.artist   || '';
+  _setLiveBadge(true);
+
+  if (song.source === 'bandcamp') {
+    if (newSong) { _clearBandcampEmbed(); _loadBandcampEmbed(song); }
+    state.isPlaying = true; _updatePPBtn(); renderQueues(); return;
+  }
+
+  _clearBandcampEmbed();
+  if (newSong) {
+    _ytLoad(song.youtubeVideoId);
+    // Seek to correct position once YouTube has buffered enough (~1.5 s)
+    if (deferredSeek > 2) {
+      const capturedSeek = deferredSeek, capturedPlay = shouldPlay;
+      setTimeout(() => {
+        try { if (ytReady && ytPlayer) { ytPlayer.seekTo(capturedSeek, true); if (!capturedPlay) ytPlayer.pauseVideo(); } } catch (_) {}
+      }, 1500);
+    }
+  } else {
+    // Same song — correct drift if > 4 s off
+    try {
+      if (ytReady && ytPlayer) {
+        if (immediateSeek > 0 && Math.abs((ytPlayer.getCurrentTime() || 0) - immediateSeek) > 4)
+          ytPlayer.seekTo(immediateSeek, true);
+        if (shouldPlay) ytPlayer.playVideo(); else ytPlayer.pauseVideo();
+      }
+    } catch (_) {}
+  }
+
+  state.isPlaying = shouldPlay;
+  if (state.isPlaying) _startProgress(); else _stopProgress();
+  _updatePPBtn();
+  renderQueues();
 }
 
 /* =============================================================
@@ -855,8 +1041,21 @@ function _renderOneQueue(qtype, queue, unlistId, listenedId, liSecId, emptyId, c
         const qt   = card.dataset.qtype;
         const q    = qt === 'room' ? state.sharedQueue : state.personalQueue;
         const song = { ...q[id], _id: id };
-        playSong(song, qt);
-        markListened(id, qt);
+        if (state.roomSyncOn && qt === 'room') {
+          // Broadcast to room — all synced listeners will switch songs
+          markListened(id, 'room');
+          _roomSyncSetSong(song);
+        } else {
+          if (state.roomSyncOn && qt !== 'room') {
+            // Leaving sync to listen to personal queue
+            state.roomSyncOn = false;
+            _renderSyncBtn();
+            _setLiveBadge(false);
+            toast('Disconnected from room sync');
+          }
+          playSong(song, qt);
+          markListened(id, qt);
+        }
         switchTab('queue');
       });
     });
@@ -946,17 +1145,34 @@ function extractBandcampUrl(str) {
   return null;
 }
 
+// Try multiple CORS proxies in sequence — any one succeeding is enough.
+async function _fetchViaCorsProxy(url) {
+  const proxies = [
+    async u => {
+      const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(u)}`);
+      if (!r.ok) throw new Error('allorigins http ' + r.status);
+      const j = await r.json();
+      if (!j.contents) throw new Error('allorigins empty');
+      return j.contents;
+    },
+    async u => {
+      const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(u)}`);
+      if (!r.ok) throw new Error('corsproxy http ' + r.status);
+      return r.text();
+    },
+  ];
+  for (const proxy of proxies) {
+    try { return await proxy(url); } catch (e) { console.warn('Proxy failed:', e.message); }
+  }
+  throw new Error('All CORS proxies failed');
+}
+
 async function handleBandcampUrl(bcUrl) {
   const el = document.getElementById('search-results');
   el.innerHTML = `<div class="spinner-wrap"><div class="spinner"></div>Loading Bandcamp track…</div>`;
   try {
-    // Fetch the track page via CORS proxy (Bandcamp oEmbed API is defunct)
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(bcUrl)}`;
-    const res = await fetch(proxyUrl);
-    if (!res.ok) throw new Error('proxy failed');
-    const json = await res.json();
-    const html = json.contents;
-    if (!html) throw new Error('no content from proxy');
+    const html = await _fetchViaCorsProxy(bcUrl);
+    if (!html) throw new Error('empty response');
 
     let title = '', artist = '', thumbnail = '', trackId = '';
 
@@ -1161,6 +1377,143 @@ function extractYouTubeId(str) {
   return null;
 }
 
+// Returns the playlist ID from a YouTube URL, or null.
+// Checked BEFORE extractYouTubeId so a watch?v=x&list=PL… is treated as a playlist.
+function extractYouTubePlaylistId(str) {
+  try {
+    const url = new URL(str.trim());
+    if (url.hostname.includes('youtube.com') || url.hostname === 'youtu.be') {
+      const list = url.searchParams.get('list');
+      if (list && list.length > 5) return list;
+    }
+  } catch (_) {}
+  return null;
+}
+
+async function handleYouTubePlaylist(playlistId) {
+  const el = document.getElementById('search-results');
+  el.innerHTML = `<div class="spinner-wrap"><div class="spinner"></div>Loading playlist…</div>`;
+  if (YOUTUBE_API_KEY === 'YOUR_YOUTUBE_API_KEY') {
+    el.innerHTML = `<div class="hint-box"><div class="hi">⚠️</div><p>Add your YouTube API key to load playlists.</p></div>`;
+    return;
+  }
+  try {
+    // playlists.list — 1 quota unit
+    const plUrl = new URL('https://www.googleapis.com/youtube/v3/playlists');
+    plUrl.searchParams.set('part', 'snippet,contentDetails');
+    plUrl.searchParams.set('id', playlistId);
+    plUrl.searchParams.set('key', YOUTUBE_API_KEY);
+    const plData = await fetch(plUrl).then(r => r.json());
+    const pl = plData.items?.[0];
+    if (!pl) {
+      el.innerHTML = `<div class="hint-box"><div class="hi">⚠️</div><p>Playlist not found or is private.</p></div>`;
+      return;
+    }
+    const title      = pl.snippet.title;
+    const channel    = pl.snippet.channelTitle;
+    const totalCount = pl.contentDetails.itemCount;
+    const thumb      = pl.snippet.thumbnails?.medium?.url || pl.snippet.thumbnails?.default?.url || '';
+    const cap        = Math.min(totalCount, 50);
+    const capNote    = totalCount > 50 ? ` (first 50 of ${totalCount})` : '';
+
+    el.innerHTML = `
+      <div class="playlist-card">
+        <div class="playlist-card-top">
+          ${thumb ? `<img class="playlist-thumb" src="${esc(thumb)}" alt="">` : '<div class="playlist-thumb"></div>'}
+          <div class="playlist-info">
+            <div class="playlist-title">${esc(title)}</div>
+            <div class="playlist-meta">${cap} songs${capNote} · ${esc(channel)}</div>
+          </div>
+        </div>
+        <div class="playlist-btns">
+          <button class="pl-btn room">+ Room Queue</button>
+          <button class="pl-btn mine">+ My Queue</button>
+        </div>
+      </div>`;
+
+    async function doAdd(qtype) {
+      el.querySelectorAll('.pl-btn').forEach(b => { b.disabled = true; });
+      el.innerHTML = `<div class="spinner-wrap"><div class="spinner"></div>Importing ${cap} songs…</div>`;
+      try {
+        const songs = await _fetchPlaylistItems(playlistId, 50);
+        if (!songs.length) throw new Error('No playable videos in this playlist');
+        await _addSongsToQueue(songs, qtype);
+        toast(`✓ Added ${songs.length} songs to ${qtype === 'room' ? 'room queue' : 'your queue'}`);
+        switchTab('queue');
+        switchQueueTab(qtype === 'room' ? 'room' : 'mine');
+        el.innerHTML = `<div class="hint-box"><div class="hi">✅</div><p>Added <strong>${songs.length} songs</strong> from<br>${esc(title)}</p></div>`;
+      } catch (e) {
+        console.error('Playlist import:', e);
+        el.innerHTML = `<div class="hint-box"><div class="hi">⚠️</div><p>Import failed: ${esc(e.message)}</p></div>`;
+      }
+    }
+
+    el.querySelector('.pl-btn.room').addEventListener('click', () => doAdd('room'));
+    el.querySelector('.pl-btn.mine').addEventListener('click', () => doAdd('mine'));
+  } catch (e) {
+    console.error('Playlist load:', e);
+    el.innerHTML = `<div class="hint-box"><div class="hi">⚠️</div><p>Couldn't load that playlist.</p></div>`;
+  }
+}
+
+// Fetch up to maxItems videos from a playlist (paginates as needed, max 1 extra page).
+async function _fetchPlaylistItems(playlistId, maxItems = 50) {
+  const songs = [];
+  let pageToken = '';
+  while (songs.length < maxItems) {
+    const url = new URL('https://www.googleapis.com/youtube/v3/playlistItems');
+    url.searchParams.set('part', 'snippet');
+    url.searchParams.set('playlistId', playlistId);
+    url.searchParams.set('maxResults', String(Math.min(50, maxItems - songs.length)));
+    url.searchParams.set('key', YOUTUBE_API_KEY);
+    if (pageToken) url.searchParams.set('pageToken', pageToken);
+    const data = await fetch(url).then(r => r.json());
+    if (data.error) throw new Error(data.error.message || 'API error');
+    for (const item of (data.items || [])) {
+      const s       = item.snippet;
+      const videoId = s.resourceId?.videoId;
+      if (!videoId || s.title === 'Private video' || s.title === 'Deleted video') continue;
+      songs.push({
+        youtubeVideoId: videoId,
+        title:     s.title || 'Unknown',
+        artist:    s.videoOwnerChannelTitle || s.channelTitle || '',
+        thumbnail: s.thumbnails?.medium?.url || s.thumbnails?.default?.url || '',
+      });
+      if (songs.length >= maxItems) break;
+    }
+    if (!data.nextPageToken || songs.length >= maxItems) break;
+    pageToken = data.nextPageToken;
+  }
+  return songs;
+}
+
+// Batch-write an array of songs to Firebase in a single update() call.
+async function _addSongsToQueue(songs, qtype) {
+  const updates = {};
+  const base    = Date.now();
+  for (let i = 0; i < songs.length; i++) {
+    const songId = genSongId();
+    const path   = qtype === 'room'
+      ? `rooms/${state.roomId}/queue/${songId}`
+      : `rooms/${state.roomId}/queues/${state.userId}/${songId}`;
+    updates[path] = {
+      youtubeVideoId: songs[i].youtubeVideoId,
+      title:          songs[i].title,
+      artist:         songs[i].artist || '',
+      thumbnail:      songs[i].thumbnail || '',
+      source:         'youtube',
+      addedBy:        state.userId,
+      addedByName:    state.userName,
+      addedAt:        base + i,   // tiny offset preserves playlist order
+      listened:       false,
+      order:          base + i,
+    };
+  }
+  await db.ref().update(updates);
+  // Update lastAddedAt once for the whole batch
+  await db.ref(`rooms/${state.roomId}/users/${state.userId}/lastAddedAt`).set(SV.TIMESTAMP);
+}
+
 async function handleYouTubeUrl(videoId) {
   const el = document.getElementById('search-results');
   // Show instantly with CDN thumbnail while we fetch metadata
@@ -1212,14 +1565,16 @@ function initSearch() {
   const resultsEl = document.getElementById('search-results');
   const hint    = `<div class="hint-box"><div class="hi">🎵</div><p>Search for a song or paste a<br>YouTube / Bandcamp track URL</p></div>`;
 
-  // On input: handle YouTube / Bandcamp URL pastes (no quota used)
+  // On input: handle URL pastes instantly (playlist → video → bandcamp)
   inp.addEventListener('input', () => {
     const q = inp.value.trim();
     if (!q) { resultsEl.innerHTML = hint; return; }
+    const plId  = extractYouTubePlaylistId(q);
+    if (plId)  { handleYouTubePlaylist(plId);  return; }
     const ytId  = extractYouTubeId(q);
-    if (ytId) { handleYouTubeUrl(ytId); return; }
+    if (ytId)  { handleYouTubeUrl(ytId);       return; }
     const bcUrl = extractBandcampUrl(q);
-    if (bcUrl) { handleBandcampUrl(bcUrl); return; }
+    if (bcUrl) { handleBandcampUrl(bcUrl);      return; }
     // Otherwise: do nothing — wait for Enter
   });
 
@@ -1229,10 +1584,12 @@ function initSearch() {
     e.preventDefault();
     const q = inp.value.trim();
     if (!q) return;
+    const plId  = extractYouTubePlaylistId(q);
+    if (plId)  { handleYouTubePlaylist(plId);  return; }
     const ytId  = extractYouTubeId(q);
-    if (ytId) { handleYouTubeUrl(ytId); return; }
+    if (ytId)  { handleYouTubeUrl(ytId);       return; }
     const bcUrl = extractBandcampUrl(q);
-    if (bcUrl) { handleBandcampUrl(bcUrl); return; }
+    if (bcUrl) { handleBandcampUrl(bcUrl);      return; }
     doSearch(q);
   });
 }
@@ -1488,12 +1845,20 @@ function bindEvents() {
   // Player controls
   document.getElementById('pb-playpause').addEventListener('click', () => {
     if (!ytReady || !ytPlayer) return;
-    if (state.isPlaying) { ytPlayer.pauseVideo(); state.isPlaying = false; }
-    else                 { ytPlayer.playVideo();  state.isPlaying = true;  }
-    _updatePPBtn();
+    if (state.roomSyncOn) {
+      // Broadcast play/pause to the whole room
+      _roomSyncSetPlaying(!state.isPlaying);
+    } else {
+      if (state.isPlaying) { ytPlayer.pauseVideo(); state.isPlaying = false; }
+      else                 { ytPlayer.playVideo();  state.isPlaying = true;  }
+      _updatePPBtn();
+    }
   });
   document.getElementById('pb-prev').addEventListener('click', _prevSong);
   document.getElementById('pb-next').addEventListener('click', advanceQueue);
+
+  // Room sync LIVE toggle button
+  document.getElementById('room-sync-btn').addEventListener('click', _roomSyncToggle);
 
   // Search
   initSearch();
