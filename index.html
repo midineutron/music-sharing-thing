@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>MusicQ – Collaborative Music Queue</title>
   <style>
     /* ============================================================
@@ -28,12 +28,16 @@
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       font-size: 15px; height: 100%; overflow: hidden;
       -webkit-font-smoothing: antialiased;
+      /* prevent double-tap zoom on all interactive elements */
+      touch-action: manipulation;
     }
     button { cursor: pointer; border: none; background: none; color: inherit; font: inherit; }
     input {
       font: inherit; color: var(--text); background: var(--surface2);
       border: 1.5px solid var(--border); border-radius: 10px;
       padding: 11px 14px; outline: none; width: 100%;
+      /* iOS auto-zooms inputs with font-size < 16px — keep it at 16px to prevent that */
+      font-size: 16px;
     }
     input:focus { border-color: var(--primary); }
     img { display: block; }
@@ -469,6 +473,11 @@
 
 <!-- Toast -->
 <div id="toast"></div>
+
+<!-- Silent looping audio — keeps the iOS audio session alive so YouTube
+     continues playing when the screen locks or the app is backgrounded.
+     src is set programmatically to a blob URL once playback starts. -->
+<audio id="bg-audio" loop playsinline style="display:none;width:0;height:0"></audio>
 
 <!-- ============================================================
      EXTERNAL LIBRARIES
@@ -993,28 +1002,65 @@ function _clearBandcampEmbed() {
 /* =============================================================
    BACKGROUND AUDIO KEEP-ALIVE + MEDIA SESSION
 ============================================================= */
-let _audioCtx = null;
+let _audioCtx  = null;
+let _bgAudio   = null;   // <audio> element used as iOS audio-session anchor
 
 /**
- * Creates a near-silent Web Audio oscillator the first time playback starts.
- * This keeps the browser's audio session alive so YouTube doesn't get
- * suspended when the screen locks or the user switches apps.
+ * Keeps the audio session alive so the YouTube iframe continues playing
+ * when the screen locks or the app is backgrounded.
+ *
+ * Strategy (layered for maximum compatibility):
+ *  1. <audio> element looping a tiny programmatic silent WAV — iOS Safari ties
+ *     background audio privilege to native <audio>/<video> elements, not to
+ *     Web Audio alone.  This is the primary anchor.
+ *  2. Web Audio oscillator at subsonic frequency as a secondary keep-alive.
+ *
+ * Must be called from a user gesture (it is: playSong() → user tap).
  */
 function _ensureAudioAlive() {
-  if (_audioCtx) {
-    if (_audioCtx.state === 'suspended') _audioCtx.resume().catch(() => {});
-    return;
+  // --- Primary: <audio> element ---
+  if (!_bgAudio) {
+    _bgAudio = document.getElementById('bg-audio');
+    if (_bgAudio && !_bgAudio.src) {
+      // Build a 100 ms silent WAV at 8 kHz / 16-bit / mono entirely in JS.
+      // No hardcoded base64 — generated at runtime so it's always valid.
+      const sr = 8000, n = 800;                   // 100 ms of silence
+      const ab  = new ArrayBuffer(44 + n * 2);
+      const dv  = new DataView(ab);
+      const w4  = (o, s) => [0,1,2,3].forEach(i => dv.setUint8(o + i, s.charCodeAt(i)));
+      w4(0, 'RIFF'); dv.setUint32(4,  36 + n * 2, true);
+      w4(8, 'WAVE'); w4(12, 'fmt ');
+      dv.setUint32(16, 16, true);   // fmt chunk size
+      dv.setUint16(20,  1, true);   // PCM
+      dv.setUint16(22,  1, true);   // mono
+      dv.setUint32(24, sr, true);   // sample rate
+      dv.setUint32(28, sr * 2, true); // byte rate (16-bit)
+      dv.setUint16(32,  2, true);   // block align
+      dv.setUint16(34, 16, true);   // bits per sample
+      w4(36, 'data'); dv.setUint32(40, n * 2, true);
+      // Remaining bytes are already zero-filled → silence
+      _bgAudio.src = URL.createObjectURL(new Blob([ab], { type: 'audio/wav' }));
+    }
+    if (_bgAudio) _bgAudio.play().catch(() => {});
+  } else if (_bgAudio.paused) {
+    _bgAudio.play().catch(() => {});
   }
-  try {
-    _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const gain = _audioCtx.createGain();
-    gain.gain.value = 0.001;            // nearly inaudible — just keeps session alive
-    const osc = _audioCtx.createOscillator();
-    osc.frequency.value = 440;
-    osc.connect(gain);
-    gain.connect(_audioCtx.destination);
-    osc.start();
-  } catch (_) { /* AudioContext unavailable — degrade gracefully */ }
+
+  // --- Backup: Web Audio oscillator ---
+  if (!_audioCtx) {
+    try {
+      _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const gain = _audioCtx.createGain();
+      gain.gain.value = 0.01;               // just above iOS "silence" threshold
+      const osc = _audioCtx.createOscillator();
+      osc.frequency.value = 1;              // 1 Hz — completely subsonic
+      osc.connect(gain);
+      gain.connect(_audioCtx.destination);
+      osc.start();
+    } catch (_) { /* AudioContext unavailable */ }
+  } else if (_audioCtx.state === 'suspended') {
+    _audioCtx.resume().catch(() => {});
+  }
 }
 
 /**
@@ -1399,6 +1445,26 @@ function bindEvents() {
 
   // Search
   initSearch();
+
+  // Prevent iOS pinch-to-zoom (gesture events are Safari-specific)
+  document.addEventListener('gesturestart',  e => e.preventDefault(), { passive: false });
+  document.addEventListener('gesturechange', e => e.preventDefault(), { passive: false });
+
+  // When the page comes back to the foreground (screen unlock / app switch),
+  // resume audio contexts and re-trigger YouTube playback if we were playing.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return;
+    // Restore Web Audio context
+    if (_audioCtx?.state === 'suspended') _audioCtx.resume().catch(() => {});
+    // Re-start the silent audio anchor if iOS paused it
+    if (_bgAudio?.paused) _bgAudio.play().catch(() => {});
+    // Re-resume YouTube if it was playing when we were backgrounded
+    if (state.isPlaying && state.currentSong?.source !== 'bandcamp') {
+      setTimeout(() => {
+        try { if (ytReady && ytPlayer) ytPlayer.playVideo(); } catch (_) {}
+      }, 300); // brief delay lets the audio session fully restore first
+    }
+  });
 }
 
 /* =============================================================
