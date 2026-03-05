@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>MusicQ – Collaborative Music Queue</title>
   <style>
     /* ============================================================
@@ -43,7 +43,7 @@
     ============================================================ */
     .auth-screen {
       display: none; flex-direction: column; align-items: center;
-      justify-content: center; min-height: 100dvh; min-height: 100vh;
+      justify-content: center; min-height: 100vh; min-height: 100dvh;
       padding: 32px 24px; gap: 8px;
     }
     .auth-screen.active { display: flex; }
@@ -66,7 +66,7 @@
     /* ============================================================
        ROOM SCREEN — SHELL
     ============================================================ */
-    #screen-room { display: none; flex-direction: column; height: 100dvh; height: 100vh; overflow: hidden; }
+    #screen-room { display: none; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; }
     #screen-room.active { display: flex; }
 
     /* Header */
@@ -89,7 +89,7 @@
     .u-name { font-size: 12px; font-weight: 500; }
 
     /* Main content */
-    #room-main { flex: 1; overflow: hidden; position: relative; }
+    #room-main { flex: 1; min-height: 0; overflow: hidden; position: relative; }
     .panel { position: absolute; inset: 0; overflow-y: auto; display: none; padding: 12px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
     .panel.active { display: block; }
 
@@ -98,6 +98,7 @@
       flex-shrink: 0;
       background: var(--surface); border-top: 1px solid var(--border);
       display: flex; flex-direction: column; padding-bottom: 10px;
+      /* On desktop (no tab bar) add safe area inset so content clears the home indicator */
     }
     #player-bar.hidden { display: none; }
     .pb-main { display: flex; align-items: center; padding: 8px 10px 4px; gap: 10px; }
@@ -138,7 +139,12 @@
     #pb-seekbar:hover #pb-handle { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 
     /* Tab bar (mobile) */
-    #tab-bar { flex-shrink: 0; height: var(--tabbar-h); background: var(--surface); border-top: 1px solid var(--border); display: flex; }
+    #tab-bar {
+      flex-shrink: 0; background: var(--surface); border-top: 1px solid var(--border); display: flex;
+      /* base height + iPhone home indicator safe area */
+      height: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+      padding-bottom: env(safe-area-inset-bottom);
+    }
     .tab-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 11px; color: var(--text-muted); transition: color 0.15s; }
     .tab-btn .ti { font-size: 20px; }
     .tab-btn.active { color: var(--primary); }
@@ -267,6 +273,8 @@
       .panel { position: static !important; display: block !important; border-right: 1px solid var(--border); overflow-y: auto; height: 100%; }
       #panel-queue { border-right: none; }
       #tab-bar { display: none; }
+      /* On desktop the player bar is the last element — give it the safe area padding */
+      #player-bar { padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
     }
   </style>
 </head>
