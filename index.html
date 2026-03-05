@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MusicQ – Collaborative Music Queue</title>
+  <style>
+    /* ============================================================
+       CSS VARIABLES & RESET
+    ============================================================ */
+    :root {
+      --bg:          #111113;
+      --surface:     #1c1c1e;
+      --surface2:    #2c2c2e;
+      --primary:     #30d158;
+      --primary-bg:  rgba(48,209,88,0.12);
+      --text:        #f2f2f7;
+      --text-muted:  #8e8e93;
+      --border:      #3a3a3c;
+      --danger:      #ff453a;
+      --header-h:    58px;
+      --player-h:    70px;
+      --tabbar-h:    56px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { height: 100%; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 15px;
+      height: 100%;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+    button { cursor: pointer; border: none; background: none; color: inherit; font: inherit; }
+    input {
+      font: inherit; color: var(--text); background: var(--surface2);
+      border: 1.5px solid var(--border); border-radius: 10px;
+      padding: 11px 14px; outline: none; width: 100%;
+    }
+    input:focus { border-color: var(--primary); }
+    img { display: block; }
+
+    /* ============================================================
+       AUTH SCREENS
+    ============================================================ */
+    .auth-screen {
+      display: none; flex-direction: column; align-items: center;
+      justify-content: center; min-height: 100dvh; min-height: 100vh;
+      padding: 32px 24px; gap: 8px;
+    }
+    .auth-screen.active { display: flex; }
+
+    .auth-logo {
+      font-size: 52px; font-weight: 800; letter-spacing: -2px;
+      color: var(--primary); margin-bottom: 4px;
+    }
+    .auth-tagline { color: var(--text-muted); font-size: 16px; margin-bottom: 24px; text-align: center; }
+
+    .auth-form { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 340px; }
+    .auth-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); }
+
+    .btn-primary {
+      background: var(--primary); color: #000; font-weight: 700; font-size: 16px;
+      padding: 14px; border-radius: 12px; width: 100%; transition: opacity 0.15s;
+    }
+    .btn-primary:hover:not(:disabled) { opacity: 0.85; }
+    .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .join-room-badge {
+      background: var(--surface2); border-radius: 8px; padding: 10px 14px;
+      font-size: 13px; color: var(--text-muted); width: 100%; max-width: 340px;
+    }
+    .join-room-badge strong { color: var(--text); font-family: 'SF Mono', 'Fira Code', monospace; }
+
+    /* ============================================================
+       ROOM SCREEN — SHELL
+    ============================================================ */
+    #screen-room {
+      display: none; flex-direction: column;
+      height: 100dvh; height: 100vh; overflow: hidden;
+    }
+    #screen-room.active { display: flex; }
+
+    /* Header */
+    #room-header {
+      flex-shrink: 0; height: var(--header-h);
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; padding: 0 12px; gap: 8px; z-index: 10;
+    }
+    #share-btn {
+      display: flex; align-items: center; gap: 5px;
+      background: var(--surface2); border-radius: 8px; padding: 6px 10px;
+      font-size: 13px; font-weight: 600; flex-shrink: 0;
+      transition: background 0.1s; white-space: nowrap;
+    }
+    #share-btn:hover { background: var(--border); }
+    #users-bar {
+      flex: 1; display: flex; align-items: center; gap: 6px;
+      overflow-x: auto; scrollbar-width: none; min-width: 0;
+    }
+    #users-bar::-webkit-scrollbar { display: none; }
+    .u-badge {
+      display: flex; align-items: center; gap: 5px;
+      background: var(--surface2); border-radius: 20px;
+      padding: 3px 9px 3px 3px; flex-shrink: 0; white-space: nowrap;
+    }
+    .u-badge.me { border: 1.5px solid var(--primary); }
+    .u-avatar {
+      width: 22px; height: 22px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; flex-shrink: 0;
+    }
+    .u-name { font-size: 12px; font-weight: 500; }
+
+    /* Main content */
+    #room-main { flex: 1; overflow: hidden; position: relative; }
+
+    .panel { position: absolute; inset: 0; overflow-y: auto; display: none; padding: 12px; }
+    .panel.active { display: block; }
+
+    /* Player bar */
+    #player-bar {
+      flex-shrink: 0; height: var(--player-h);
+      background: var(--surface); border-top: 1px solid var(--border);
+      display: flex; align-items: center; padding: 0 10px; gap: 10px;
+    }
+    #player-bar.hidden { display: none; }
+    .pb-thumb { width: 52px; height: 39px; border-radius: 5px; object-fit: cover; flex-shrink: 0; background: var(--surface2); }
+    .pb-info { flex: 1; min-width: 0; }
+    #pb-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #pb-artist { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pb-controls { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+    .pb-btn {
+      width: 38px; height: 38px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; transition: background 0.1s;
+    }
+    .pb-btn:hover { background: var(--surface2); }
+    #pb-playpause {
+      background: var(--primary); color: #000; font-size: 16px; font-weight: 700;
+    }
+    #pb-playpause:hover { opacity: 0.85; background: var(--primary); }
+
+    /* Tab bar */
+    #tab-bar {
+      flex-shrink: 0; height: var(--tabbar-h);
+      background: var(--surface); border-top: 1px solid var(--border);
+      display: flex;
+    }
+    .tab-btn {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 2px; font-size: 11px; color: var(--text-muted);
+      transition: color 0.15s;
+    }
+    .tab-btn .ti { font-size: 20px; }
+    .tab-btn.active { color: var(--primary); }
+
+    /* ============================================================
+       SEARCH PANEL
+    ============================================================ */
+    .search-wrap { position: relative; margin-bottom: 12px; }
+    .search-wrap input { padding-left: 38px; }
+    .search-icon {
+      position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+      color: var(--text-muted); font-size: 15px; pointer-events: none;
+    }
+    .hint-box { text-align: center; padding: 48px 16px; color: var(--text-muted); }
+    .hint-box .hi { font-size: 36px; margin-bottom: 10px; }
+    .hint-box p { font-size: 14px; line-height: 1.5; }
+
+    .spinner-wrap { text-align: center; padding: 36px; color: var(--text-muted); font-size: 13px; }
+    .spinner {
+      width: 28px; height: 28px; border: 3px solid var(--border);
+      border-top-color: var(--primary); border-radius: 50%;
+      animation: spin 0.65s linear infinite; margin: 0 auto 10px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .result-card {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px; border-radius: 10px; margin-bottom: 4px;
+      cursor: pointer; transition: background 0.1s;
+    }
+    .result-card:hover, .result-card:active { background: var(--surface2); }
+    .result-thumb {
+      width: 88px; height: 58px; object-fit: cover;
+      border-radius: 6px; flex-shrink: 0; background: var(--surface2);
+    }
+    .result-info { flex: 1; min-width: 0; }
+    .result-title {
+      font-size: 13px; font-weight: 500; line-height: 1.35;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden; margin-bottom: 3px;
+    }
+    .result-ch { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .add-btn {
+      width: 34px; height: 34px; border-radius: 50%; background: var(--primary);
+      color: #000; font-size: 22px; font-weight: 700; display: flex;
+      align-items: center; justify-content: center; flex-shrink: 0;
+      line-height: 1; transition: opacity 0.1s, transform 0.1s;
+    }
+    .add-btn:hover { opacity: 0.85; transform: scale(1.08); }
+
+    /* ============================================================
+       QUEUE PANEL
+    ============================================================ */
+    .q-empty { text-align: center; padding: 60px 16px; color: var(--text-muted); }
+    .q-empty .hi { font-size: 36px; margin-bottom: 10px; }
+    .q-empty p { font-size: 14px; line-height: 1.5; }
+
+    .section-label {
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.6px; color: var(--text-muted); padding: 14px 4px 6px;
+    }
+
+    .song-card {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--surface); border-radius: 12px;
+      padding: 8px; margin-bottom: 6px; cursor: default;
+      border: 1px solid transparent; transition: border-color 0.15s, background 0.1s;
+      position: relative;
+    }
+    .song-card.playing { border-color: var(--primary); background: var(--surface2); }
+    .song-card.listened { opacity: 0.45; }
+
+    .drag-handle {
+      color: var(--text-muted); font-size: 16px; cursor: grab;
+      padding: 4px 2px; flex-shrink: 0; touch-action: none; user-select: none;
+    }
+    .drag-handle:active { cursor: grabbing; }
+
+    .st-wrap { position: relative; flex-shrink: 0; cursor: pointer; }
+    .song-thumb { width: 54px; height: 40px; object-fit: cover; border-radius: 5px; background: var(--surface2); }
+    .play-overlay {
+      position: absolute; inset: 0; background: rgba(0,0,0,0.55);
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 5px; font-size: 14px; opacity: 0; transition: opacity 0.15s;
+    }
+    .song-card:hover .play-overlay { opacity: 1; }
+    .now-dot {
+      position: absolute; bottom: 3px; right: 3px;
+      width: 7px; height: 7px; border-radius: 50%; background: var(--primary);
+    }
+
+    .song-info { flex: 1; min-width: 0; }
+    .song-title { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
+    .song-meta { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .song-from { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+
+    .s-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+    .icon-btn {
+      width: 30px; height: 30px; border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-muted); font-size: 14px; transition: background 0.1s, color 0.1s;
+    }
+    .icon-btn:hover { background: var(--border); color: var(--text); }
+    .icon-btn.on { color: var(--primary); }
+    .icon-btn.del:hover { background: rgba(255,69,58,0.15); color: var(--danger); }
+
+    /* Sortable */
+    .sortable-ghost { opacity: 0.35; }
+    .sortable-drag { opacity: 0.95; }
+
+    /* ============================================================
+       RECIPIENT MODAL (bottom sheet)
+    ============================================================ */
+    .modal { position: fixed; inset: 0; z-index: 500; display: flex; align-items: flex-end; }
+    .modal.hidden { display: none; }
+    .modal-bd { position: absolute; inset: 0; background: rgba(0,0,0,0.65); }
+    .modal-sheet {
+      position: relative; background: var(--surface); border-radius: 20px 20px 0 0;
+      width: 100%; padding: 16px 16px 24px; max-height: 85vh; overflow-y: auto;
+    }
+    .sheet-handle {
+      width: 36px; height: 4px; background: var(--border);
+      border-radius: 2px; margin: 0 auto 16px;
+    }
+    .sheet-title { font-weight: 700; font-size: 18px; margin-bottom: 3px; }
+    .sheet-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 14px; }
+
+    .song-preview {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--surface2); border-radius: 10px; padding: 10px; margin-bottom: 14px;
+    }
+    .song-preview img { width: 50px; height: 37px; object-fit: cover; border-radius: 4px; flex-shrink: 0; }
+    .sp-title { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sp-ch { font-size: 12px; color: var(--text-muted); }
+    .sp-info { min-width: 0; }
+
+    .recipient-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 10px; border-radius: 10px; cursor: pointer;
+      transition: background 0.1s; margin-bottom: 3px;
+    }
+    .recipient-item:hover, .recipient-item:active { background: var(--surface2); }
+    .r-avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 17px; flex-shrink: 0;
+    }
+    .r-name { font-weight: 500; font-size: 15px; }
+
+    .sheet-cancel {
+      width: 100%; padding: 14px; border-radius: 12px;
+      background: var(--surface2); font-weight: 600; font-size: 16px;
+      margin-top: 10px; transition: opacity 0.1s;
+    }
+    .sheet-cancel:hover { opacity: 0.8; }
+
+    /* ============================================================
+       TOAST
+    ============================================================ */
+    #toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: #3a3a3c; color: var(--text); padding: 9px 18px;
+      border-radius: 20px; font-size: 13px; font-weight: 500;
+      z-index: 900; opacity: 0; transition: opacity 0.2s;
+      pointer-events: none; white-space: nowrap; max-width: 90vw;
+    }
+    #toast.show { opacity: 1; }
+
+    /* ============================================================
+       DESKTOP LAYOUT (768px+)
+    ============================================================ */
+    @media (min-width: 768px) {
+      #room-main {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+      .panel {
+        position: static !important;
+        display: block !important;
+        border-right: 1px solid var(--border);
+        overflow-y: auto;
+        height: 100%;
+      }
+      #panel-queue { border-right: none; }
+      #tab-bar { display: none; }
+      #player-bar { border-top: 1px solid var(--border); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ============================================================
+     CREATE ROOM SCREEN
+============================================================ -->
+<div id="screen-create" class="auth-screen">
+  <div class="auth-logo">MusicQ</div>
+  <div class="auth-tagline">Share music with friends, in real-time</div>
+  <div class="auth-form">
+    <div class="auth-label">Your Name</div>
+    <input id="create-name" type="text" placeholder="Enter your name" maxlength="30" autocomplete="off" autocorrect="off">
+    <button id="create-btn" class="btn-primary" disabled>Create a Room</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     JOIN ROOM SCREEN
+============================================================ -->
+<div id="screen-join" class="auth-screen">
+  <div class="auth-logo">MusicQ</div>
+  <div class="auth-tagline">You've been invited to a room</div>
+  <div class="auth-form">
+    <div class="join-room-badge">Room: <strong id="join-room-id-text"></strong></div>
+    <div class="auth-label">Your Name</div>
+    <input id="join-name" type="text" placeholder="Enter your name" maxlength="30" autocomplete="off" autocorrect="off">
+    <button id="join-btn" class="btn-primary" disabled>Join Room</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     ROOM SCREEN
+============================================================ -->
+<div id="screen-room">
+
+  <!-- Header -->
+  <header id="room-header">
+    <button id="share-btn" title="Copy share link">
+      <span>🔗</span>
+      <span id="share-room-id"></span>
+    </button>
+    <div id="users-bar"><!-- user badges --></div>
+  </header>
+
+  <!-- Main panels -->
+  <div id="room-main">
+
+    <!-- Search -->
+    <div id="panel-search" class="panel active">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input id="search-input" type="text" placeholder="Search for music…" autocomplete="off" autocorrect="off">
+      </div>
+      <div id="search-results">
+        <div class="hint-box">
+          <div class="hi">🎵</div>
+          <p>Search for a song and send it<br>to someone in the room</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Queue -->
+    <div id="panel-queue" class="panel">
+      <div id="q-unlistened"><!-- draggable cards --></div>
+      <div id="q-listened-section" style="display:none">
+        <div class="section-label">Listened</div>
+        <div id="q-listened"><!-- listened cards --></div>
+      </div>
+      <div id="q-empty" class="q-empty" style="display:none">
+        <div class="hi">🎶</div>
+        <p>Your queue is empty.<br>Ask someone to send you a song!</p>
+      </div>
+    </div>
+
+  </div><!-- /room-main -->
+
+  <!-- Player bar -->
+  <div id="player-bar" class="hidden">
+    <img class="pb-thumb" id="pb-thumb" src="" alt="">
+    <div class="pb-info">
+      <div id="pb-title">—</div>
+      <div id="pb-artist">—</div>
+    </div>
+    <div class="pb-controls">
+      <button class="pb-btn" id="pb-prev" title="Previous">⏮</button>
+      <button class="pb-btn" id="pb-playpause" title="Play / Pause">▶</button>
+      <button class="pb-btn" id="pb-next" title="Next">⏭</button>
+    </div>
+  </div>
+
+  <!-- Tab bar (mobile) -->
+  <nav id="tab-bar">
+    <button class="tab-btn active" data-tab="search">
+      <span class="ti">🔍</span>Search
+    </button>
+    <button class="tab-btn" data-tab="queue">
+      <span class="ti">🎵</span>Queue
+    </button>
+  </nav>
+
+</div><!-- /screen-room -->
+
+<!-- Hidden YouTube player container (always in DOM) -->
+<div id="yt-wrap" style="position:fixed;width:1px;height:1px;overflow:hidden;bottom:0;right:0;z-index:-1;opacity:0">
+  <div id="yt-player"></div>
+</div>
+
+<!-- ============================================================
+     RECIPIENT MODAL
+============================================================ -->
+<div id="recipient-modal" class="modal hidden">
+  <div class="modal-bd" id="modal-bd"></div>
+  <div class="modal-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Send to…</div>
+    <div class="sheet-sub">Choose who receives this song</div>
+    <div class="song-preview" id="modal-preview">
+      <img id="modal-thumb" src="" alt="">
+      <div class="sp-info">
+        <div class="sp-title" id="modal-song-title"></div>
+        <div class="sp-ch" id="modal-song-ch"></div>
+      </div>
+    </div>
+    <div id="recipient-list"><!-- injected --></div>
+    <button class="sheet-cancel" id="modal-cancel">Cancel</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- ============================================================
+     EXTERNAL LIBRARIES
+============================================================ -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script src="https://www.youtube.com/iframe_api"></script>
+
+<script>
+/* =============================================================
+   CONFIGURATION
+   Replace these placeholders with your real values before deploying.
+   See README / spec for setup instructions.
+============================================================= */
+const firebaseConfig = {
+  apiKey:            "YOUR_FIREBASE_API_KEY",
+  authDomain:        "YOUR_PROJECT.firebaseapp.com",
+  databaseURL:       "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+  projectId:         "YOUR_PROJECT_ID",
+  storageBucket:     "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId:             "YOUR_APP_ID"
+};
+
+const YOUTUBE_API_KEY = "YOUR_YOUTUBE_API_KEY";
+
+/* =============================================================
+   FIREBASE INIT
+============================================================= */
+firebase.initializeApp(firebaseConfig);
+const db   = firebase.database();
+const auth = firebase.auth();
+const SV   = firebase.database.ServerValue; // ServerValue.TIMESTAMP
+
+/* =============================================================
+   STATE
+============================================================= */
+const state = {
+  roomId:      null,
+  userId:      null,
+  userName:    null,
+  users:       {},   // { uid: { name, joinedAt } }
+  queue:       {},   // { songId: { ...fields } }
+  currentSong: null, // { ...fields, _id }
+  isPlaying:   false,
+  activeTab:   'search',
+  pendingSong:  null, // song waiting for recipient selection
+};
+
+let sortableInst = null;
+
+/* =============================================================
+   YOUTUBE PLAYER
+============================================================= */
+let ytPlayer  = null;
+let ytReady   = false;
+
+window.onYouTubeIframeAPIReady = function () {
+  ytPlayer = new YT.Player('yt-player', {
+    width: 1, height: 1, videoId: '',
+    playerVars: { autoplay: 1, playsinline: 1, controls: 0 },
+    events: {
+      onReady: () => {
+        ytReady = true;
+        if (state.currentSong) _ytLoad(state.currentSong.youtubeVideoId);
+      },
+      onStateChange: onYTState,
+    },
+  });
+};
+
+function onYTState(e) {
+  if (e.data === YT.PlayerState.ENDED) { advanceQueue(); return; }
+  state.isPlaying = (e.data === YT.PlayerState.PLAYING);
+  _updatePPBtn();
+}
+
+function _ytLoad(videoId) {
+  if (ytReady && ytPlayer) ytPlayer.loadVideoById(videoId);
+}
+
+function _updatePPBtn() {
+  document.getElementById('pb-playpause').textContent = state.isPlaying ? '⏸' : '▶';
+}
+
+function playSong(song) {
+  state.currentSong = song;
+  _ytLoad(song.youtubeVideoId);
+  state.isPlaying = true;
+  _updatePPBtn();
+  // Update player bar
+  const bar = document.getElementById('player-bar');
+  bar.classList.remove('hidden');
+  document.getElementById('pb-thumb').src   = song.thumbnail || '';
+  document.getElementById('pb-title').textContent  = song.title || '';
+  document.getElementById('pb-artist').textContent = song.artist || '';
+  renderQueue(); // refresh playing state in queue
+}
+
+function advanceQueue() {
+  const list = _unlistened();
+  if (!list.length) return;
+  const idx  = state.currentSong ? list.findIndex(s => s._id === state.currentSong._id) : -1;
+  const next = list[idx + 1];
+  if (next) { playSong(next); markListened(next._id); }
+}
+
+function _prevSong() {
+  const list = _unlistened();
+  if (!list.length) return;
+  const idx  = state.currentSong ? list.findIndex(s => s._id === state.currentSong._id) : 1;
+  const prev = list[Math.max(0, idx - 1)];
+  if (prev) playSong(prev);
+}
+
+function _unlistened() {
+  return Object.entries(state.queue)
+    .map(([id, s]) => ({ ...s, _id: id }))
+    .filter(s => !s.listened)
+    .sort((a, b) => (a.order ?? a.addedAt ?? 0) - (b.order ?? b.addedAt ?? 0));
+}
+
+/* =============================================================
+   HELPERS
+============================================================= */
+function genRoomId() {
+  const a = 'abcdefghjkmnpqrstuvwxyz23456789';
+  return Array.from({ length: 10 }, () => a[Math.random() * a.length | 0]).join('');
+}
+function genSongId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+function initial(name) { return (name || '?').charAt(0).toUpperCase(); }
+function uidColor(uid) {
+  const palette = ['#ff6b6b','#ffa94d','#ffd43b','#69db7c','#4dabf7','#da77f2','#f783ac','#63e6be','#74c0fc'];
+  let h = 0;
+  for (const c of (uid || '')) h = ((h << 5) - h + c.charCodeAt(0)) | 0;
+  return palette[Math.abs(h) % palette.length];
+}
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+let _toastT;
+function toast(msg, ms = 2600) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastT);
+  _toastT = setTimeout(() => el.classList.remove('show'), ms);
+}
+
+function showScreen(id) {
+  ['screen-create','screen-join','screen-room'].forEach(sid => {
+    document.getElementById(sid).classList.toggle('active', sid === id);
+  });
+}
+
+/* =============================================================
+   INIT / ROUTING
+============================================================= */
+async function init() {
+  // Validate config
+  if (firebaseConfig.apiKey === 'YOUR_FIREBASE_API_KEY') {
+    showScreen('screen-create');
+    document.getElementById('create-btn').textContent = '⚠ Add Firebase config first';
+    return;
+  }
+
+  let user;
+  try {
+    const cred = await auth.signInAnonymously();
+    user = cred.user;
+  } catch (e) {
+    toast('Auth error — check Firebase config');
+    showScreen('screen-create');
+    return;
+  }
+  state.userId = user.uid;
+
+  const params = new URLSearchParams(window.location.search);
+  const roomId = params.get('room');
+
+  if (!roomId) { showScreen('screen-create'); return; }
+
+  state.roomId = roomId;
+  document.getElementById('join-room-id-text').textContent = roomId;
+
+  // Check if already a member
+  try {
+    const snap = await db.ref(`rooms/${roomId}/users/${user.uid}`).get();
+    if (snap.exists()) {
+      state.userName = snap.val().name;
+      localStorage.setItem(`musicq_room_${roomId}`, user.uid);
+      enterRoom();
+      return;
+    }
+  } catch (_) { /* room may not exist yet */ }
+
+  showScreen('screen-join');
+}
+
+/* =============================================================
+   CREATE ROOM
+============================================================= */
+async function createRoom(name) {
+  const roomId = genRoomId();
+  try {
+    await db.ref(`rooms/${roomId}/users/${state.userId}`).set({
+      name, joinedAt: SV.TIMESTAMP, lastAddedAt: 0,
+    });
+    state.roomId   = roomId;
+    state.userName = name;
+    localStorage.setItem(`musicq_room_${roomId}`, state.userId);
+    const u = new URL(location.href);
+    u.searchParams.set('room', roomId);
+    history.pushState({}, '', u.toString());
+    enterRoom();
+  } catch (e) {
+    console.error(e);
+    toast('Failed to create room — check Firebase config');
+    document.getElementById('create-btn').disabled = false;
+    document.getElementById('create-btn').textContent = 'Create a Room';
+  }
+}
+
+/* =============================================================
+   JOIN ROOM
+============================================================= */
+async function joinRoom(roomId, name) {
+  try {
+    await db.ref(`rooms/${roomId}/users/${state.userId}`).set({
+      name, joinedAt: SV.TIMESTAMP, lastAddedAt: 0,
+    });
+    state.userName = name;
+    localStorage.setItem(`musicq_room_${roomId}`, state.userId);
+    enterRoom();
+  } catch (e) {
+    console.error(e);
+    toast('Failed to join — room may not exist');
+    document.getElementById('join-btn').disabled = false;
+    document.getElementById('join-btn').textContent = 'Join Room';
+  }
+}
+
+/* =============================================================
+   ENTER ROOM
+============================================================= */
+function enterRoom() {
+  showScreen('screen-room');
+  document.getElementById('share-room-id').textContent = state.roomId;
+  setupUsersListener();
+  setupQueueListener();
+}
+
+/* =============================================================
+   FIREBASE LISTENERS
+============================================================= */
+function setupUsersListener() {
+  db.ref(`rooms/${state.roomId}/users`).on('value', snap => {
+    state.users = snap.val() || {};
+    renderUsers();
+  });
+}
+
+function setupQueueListener() {
+  db.ref(`rooms/${state.roomId}/queues/${state.userId}`).on('value', snap => {
+    state.queue = snap.val() || {};
+    renderQueue();
+  });
+}
+
+/* =============================================================
+   RENDER USERS (header badges)
+============================================================= */
+function renderUsers() {
+  const bar = document.getElementById('users-bar');
+  bar.innerHTML = Object.entries(state.users)
+    .sort(([,a],[,b]) => (a.joinedAt||0) - (b.joinedAt||0))
+    .map(([uid, u]) => {
+      const me = uid === state.userId;
+      const color = uidColor(uid);
+      return `<div class="u-badge${me?' me':''}">
+        <div class="u-avatar" style="background:${color}25;color:${color}">${esc(initial(u.name))}</div>
+        <span class="u-name">${esc(u.name)}${me?' (you)':''}</span>
+      </div>`;
+    }).join('');
+}
+
+/* =============================================================
+   RENDER QUEUE
+============================================================= */
+function renderQueue() {
+  const all = Object.entries(state.queue).map(([id, s]) => ({ ...s, _id: id }));
+  const unlistened = all.filter(s => !s.listened)
+    .sort((a, b) => (a.order ?? a.addedAt ?? 0) - (b.order ?? b.addedAt ?? 0));
+  const listened = all.filter(s => s.listened)
+    .sort((a, b) => (a.order ?? a.addedAt ?? 0) - (b.order ?? b.addedAt ?? 0));
+
+  const qUn = document.getElementById('q-unlistened');
+  const qLi = document.getElementById('q-listened');
+  const liSec = document.getElementById('q-listened-section');
+  const empty = document.getElementById('q-empty');
+
+  qUn.innerHTML  = unlistened.map(songCard).join('');
+  qLi.innerHTML  = listened.map(songCard).join('');
+  liSec.style.display = listened.length   ? 'block' : 'none';
+  empty.style.display = all.length === 0  ? 'block' : 'none';
+
+  // Bind events
+  [qUn, qLi].forEach(el => {
+    el.querySelectorAll('.st-wrap').forEach(w => {
+      w.addEventListener('click', () => {
+        const card = w.closest('.song-card');
+        const id   = card.dataset.id;
+        const song = { ...state.queue[id], _id: id };
+        playSong(song);
+        markListened(id);
+        switchTab('queue');
+      });
+    });
+    el.querySelectorAll('.btn-listened').forEach(b => {
+      b.addEventListener('click', e => { e.stopPropagation(); toggleListened(b.dataset.id); });
+    });
+    el.querySelectorAll('.btn-delete').forEach(b => {
+      b.addEventListener('click', e => { e.stopPropagation(); deleteSong(b.dataset.id); });
+    });
+  });
+
+  // Drag-and-drop on unlistened
+  if (sortableInst) { sortableInst.destroy(); sortableInst = null; }
+  if (unlistened.length > 1) {
+    sortableInst = Sortable.create(qUn, {
+      handle: '.drag-handle',
+      animation: 140,
+      ghostClass: 'sortable-ghost',
+      dragClass:  'sortable-drag',
+      onEnd: reorderQueue,
+    });
+  }
+}
+
+function songCard(song) {
+  const playing = state.currentSong && state.currentSong._id === song._id;
+  return `<div class="song-card${playing?' playing':''}${song.listened?' listened':''}" data-id="${esc(song._id)}">
+    <div class="drag-handle" title="Drag to reorder">⠿</div>
+    <div class="st-wrap" title="Play">
+      <img class="song-thumb" src="${esc(song.thumbnail||'')}" alt="" loading="lazy">
+      <div class="play-overlay">▶</div>
+      ${playing ? '<div class="now-dot"></div>' : ''}
+    </div>
+    <div class="song-info">
+      <div class="song-title">${esc(song.title||'')}</div>
+      <div class="song-meta">${esc(song.artist||'')}</div>
+      <div class="song-from">from ${esc(song.addedByName||'?')}</div>
+    </div>
+    <div class="s-actions">
+      <button class="icon-btn btn-listened${song.listened?' on':''}" data-id="${esc(song._id)}" title="${song.listened?'Mark unlistened':'Mark listened'}">✓</button>
+      <button class="icon-btn del btn-delete" data-id="${esc(song._id)}" title="Remove">✕</button>
+    </div>
+  </div>`;
+}
+
+/* =============================================================
+   QUEUE OPERATIONS
+============================================================= */
+function reorderQueue() {
+  const cards = document.querySelectorAll('#q-unlistened .song-card');
+  const upd   = {};
+  cards.forEach((card, i) => {
+    upd[`rooms/${state.roomId}/queues/${state.userId}/${card.dataset.id}/order`] = i;
+  });
+  db.ref().update(upd).catch(console.error);
+}
+
+function markListened(songId) {
+  db.ref(`rooms/${state.roomId}/queues/${state.userId}/${songId}/listened`).set(true).catch(console.error);
+}
+
+function toggleListened(songId) {
+  const s = state.queue[songId];
+  if (!s) return;
+  db.ref(`rooms/${state.roomId}/queues/${state.userId}/${songId}/listened`).set(!s.listened).catch(console.error);
+}
+
+function deleteSong(songId) {
+  if (state.currentSong && state.currentSong._id === songId) {
+    if (ytReady && ytPlayer) ytPlayer.stopVideo();
+    state.currentSong = null;
+    state.isPlaying = false;
+    document.getElementById('player-bar').classList.add('hidden');
+    _updatePPBtn();
+  }
+  db.ref(`rooms/${state.roomId}/queues/${state.userId}/${songId}`).remove().catch(console.error);
+}
+
+/* =============================================================
+   YOUTUBE SEARCH
+============================================================= */
+let _searchTimer;
+
+function initSearch() {
+  const inp = document.getElementById('search-input');
+  inp.addEventListener('input', () => {
+    const q = inp.value.trim();
+    clearTimeout(_searchTimer);
+    if (!q) {
+      document.getElementById('search-results').innerHTML =
+        `<div class="hint-box"><div class="hi">🎵</div><p>Search for a song and send it<br>to someone in the room</p></div>`;
+      return;
+    }
+    _searchTimer = setTimeout(() => doSearch(q), 300);
+  });
+}
+
+async function doSearch(query) {
+  const el = document.getElementById('search-results');
+  el.innerHTML = `<div class="spinner-wrap"><div class="spinner"></div>Searching…</div>`;
+
+  if (YOUTUBE_API_KEY === 'YOUR_YOUTUBE_API_KEY') {
+    el.innerHTML = `<div class="hint-box"><div class="hi">⚠️</div><p>Add your YouTube API key to enable search.</p></div>`;
+    return;
+  }
+
+  try {
+    const url = new URL('https://www.googleapis.com/youtube/v3/search');
+    url.searchParams.set('part', 'snippet');
+    url.searchParams.set('type', 'video');
+    url.searchParams.set('videoCategoryId', '10');
+    url.searchParams.set('maxResults', '10');
+    url.searchParams.set('q', query);
+    url.searchParams.set('key', YOUTUBE_API_KEY);
+
+    const res  = await fetch(url.toString());
+    const data = await res.json();
+
+    if (data.error) {
+      el.innerHTML = `<div class="hint-box"><div class="hi">⚠️</div><p>${esc(data.error.message)}</p></div>`;
+      return;
+    }
+
+    const items = data.items || [];
+    if (!items.length) {
+      el.innerHTML = `<div class="hint-box"><div class="hi">🔎</div><p>No results found</p></div>`;
+      return;
+    }
+
+    el.innerHTML = items.map(item => {
+      const vid   = item.id.videoId;
+      const s     = item.snippet;
+      const thumb = s.thumbnails?.medium?.url || s.thumbnails?.default?.url || '';
+      return `<div class="result-card"
+                   data-vid="${esc(vid)}" data-title="${esc(s.title)}"
+                   data-ch="${esc(s.channelTitle)}" data-thumb="${esc(thumb)}">
+        <img class="result-thumb" src="${esc(thumb)}" alt="" loading="lazy">
+        <div class="result-info">
+          <div class="result-title">${esc(s.title)}</div>
+          <div class="result-ch">${esc(s.channelTitle)}</div>
+        </div>
+        <button class="add-btn" title="Send to…">+</button>
+      </div>`;
+    }).join('');
+
+    const handler = card => {
+      const song = {
+        youtubeVideoId: card.dataset.vid,
+        title:   card.dataset.title,
+        artist:  card.dataset.ch,
+        thumbnail: card.dataset.thumb,
+      };
+      el.querySelectorAll('.result-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      openRecipientPicker(song);
+    };
+
+    el.querySelectorAll('.result-card').forEach(card => {
+      card.addEventListener('click', () => handler(card));
+    });
+
+  } catch (e) {
+    console.error(e);
+    el.innerHTML = `<div class="hint-box"><div class="hi">⚠️</div><p>Search failed — check your API key.</p></div>`;
+  }
+}
+
+/* =============================================================
+   RECIPIENT PICKER
+============================================================= */
+function openRecipientPicker(song) {
+  state.pendingSong = song;
+
+  document.getElementById('modal-thumb').src         = song.thumbnail || '';
+  document.getElementById('modal-song-title').textContent = song.title || '';
+  document.getElementById('modal-song-ch').textContent    = song.artist || '';
+
+  const others = Object.entries(state.users)
+    .filter(([uid]) => uid !== state.userId)
+    .sort(([,a],[,b]) => (a.joinedAt||0) - (b.joinedAt||0));
+
+  const list = document.getElementById('recipient-list');
+  if (!others.length) {
+    list.innerHTML = `<div class="hint-box" style="padding:20px 0">
+      <div class="hi">👤</div>
+      <p>No other users in the room yet.<br>Share the link to invite friends!</p>
+    </div>`;
+  } else {
+    list.innerHTML = others.map(([uid, u]) => {
+      const color = uidColor(uid);
+      return `<div class="recipient-item" data-uid="${esc(uid)}">
+        <div class="r-avatar" style="background:${color}25;color:${color}">${esc(initial(u.name))}</div>
+        <div class="r-name">${esc(u.name)}</div>
+      </div>`;
+    }).join('');
+    list.querySelectorAll('.recipient-item').forEach(item => {
+      item.addEventListener('click', () => {
+        sendSong(state.pendingSong, item.dataset.uid);
+        closeModal();
+      });
+    });
+  }
+
+  document.getElementById('recipient-modal').classList.remove('hidden');
+}
+
+function closeModal() {
+  document.getElementById('recipient-modal').classList.add('hidden');
+  state.pendingSong = null;
+}
+
+/* =============================================================
+   SEND SONG
+============================================================= */
+async function sendSong(song, recipientId) {
+  const songId = genSongId();
+  try {
+    await db.ref(`rooms/${state.roomId}/queues/${recipientId}/${songId}`).set({
+      title:          song.title,
+      artist:         song.artist || '',
+      thumbnail:      song.thumbnail || '',
+      youtubeVideoId: song.youtubeVideoId,
+      addedBy:        state.userId,
+      addedByName:    state.userName,
+      addedAt:        SV.TIMESTAMP,
+      listened:       false,
+      order:          Date.now(),
+    });
+    // Update lastAddedAt for rate limiting
+    await db.ref(`rooms/${state.roomId}/users/${state.userId}/lastAddedAt`).set(SV.TIMESTAMP);
+    const name = state.users[recipientId]?.name || 'them';
+    toast(`✓ Sent to ${name}`);
+  } catch (e) {
+    console.error(e);
+    if (e.code === 'PERMISSION_DENIED') {
+      toast('⏱ Slow down — wait a moment before sending again');
+    } else {
+      toast('Failed to send. Try again.');
+    }
+  }
+}
+
+/* =============================================================
+   TAB SWITCHING
+============================================================= */
+function switchTab(tab) {
+  state.activeTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === tab);
+  });
+  document.getElementById('panel-search').classList.toggle('active', tab === 'search');
+  document.getElementById('panel-queue').classList.toggle('active', tab === 'queue');
+}
+
+/* =============================================================
+   COPY SHARE LINK
+============================================================= */
+function copyShareLink() {
+  const url = new URL(location.href);
+  url.searchParams.set('room', state.roomId);
+  const link = url.toString();
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(link).then(() => toast('Link copied!')).catch(() => fallbackCopy(link));
+  } else {
+    fallbackCopy(link);
+  }
+}
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;opacity:0';
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  document.body.removeChild(ta);
+  toast('Link copied!');
+}
+
+/* =============================================================
+   EVENT BINDINGS
+============================================================= */
+function bindEvents() {
+  // Create room
+  const cName = document.getElementById('create-name');
+  const cBtn  = document.getElementById('create-btn');
+  cName.addEventListener('input', () => { cBtn.disabled = !cName.value.trim(); });
+  cName.addEventListener('keydown', e => { if (e.key==='Enter' && cName.value.trim()) cBtn.click(); });
+  cBtn.addEventListener('click', () => {
+    const name = cName.value.trim(); if (!name) return;
+    cBtn.disabled = true; cBtn.textContent = 'Creating…';
+    createRoom(name);
+  });
+
+  // Join room
+  const jName = document.getElementById('join-name');
+  const jBtn  = document.getElementById('join-btn');
+  jName.addEventListener('input', () => { jBtn.disabled = !jName.value.trim(); });
+  jName.addEventListener('keydown', e => { if (e.key==='Enter' && jName.value.trim()) jBtn.click(); });
+  jBtn.addEventListener('click', () => {
+    const name = jName.value.trim(); if (!name) return;
+    jBtn.disabled = true; jBtn.textContent = 'Joining…';
+    joinRoom(state.roomId, name);
+  });
+
+  // Tab bar
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.addEventListener('click', () => switchTab(b.dataset.tab));
+  });
+
+  // Share button
+  document.getElementById('share-btn').addEventListener('click', copyShareLink);
+
+  // Modal
+  document.getElementById('modal-bd').addEventListener('click', closeModal);
+  document.getElementById('modal-cancel').addEventListener('click', closeModal);
+
+  // Player controls
+  document.getElementById('pb-playpause').addEventListener('click', () => {
+    if (!ytReady || !ytPlayer) return;
+    if (state.isPlaying) { ytPlayer.pauseVideo(); state.isPlaying = false; }
+    else                 { ytPlayer.playVideo();  state.isPlaying = true;  }
+    _updatePPBtn();
+  });
+  document.getElementById('pb-prev').addEventListener('click', _prevSong);
+  document.getElementById('pb-next').addEventListener('click', advanceQueue);
+
+  // Search
+  initSearch();
+}
+
+/* =============================================================
+   BOOT
+============================================================= */
+document.addEventListener('DOMContentLoaded', () => {
+  bindEvents();
+  init().catch(e => { console.error(e); toast('Startup error — check console'); });
+});
+</script>
+</body>
+</html>
