@@ -13,7 +13,6 @@
       --surface:     #1c1c1e;
       --surface2:    #2c2c2e;
       --primary:     #30d158;
-      --primary-bg:  rgba(48,209,88,0.12);
       --text:        #f2f2f7;
       --text-muted:  #8e8e93;
       --border:      #3a3a3c;
@@ -25,12 +24,9 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { height: 100%; }
     body {
-      background: var(--bg);
-      color: var(--text);
+      background: var(--bg); color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 15px;
-      height: 100%;
-      overflow: hidden;
+      font-size: 15px; height: 100%; overflow: hidden;
       -webkit-font-smoothing: antialiased;
     }
     button { cursor: pointer; border: none; background: none; color: inherit; font: inherit; }
@@ -51,23 +47,16 @@
       padding: 32px 24px; gap: 8px;
     }
     .auth-screen.active { display: flex; }
-
-    .auth-logo {
-      font-size: 52px; font-weight: 800; letter-spacing: -2px;
-      color: var(--primary); margin-bottom: 4px;
-    }
+    .auth-logo { font-size: 52px; font-weight: 800; letter-spacing: -2px; color: var(--primary); margin-bottom: 4px; }
     .auth-tagline { color: var(--text-muted); font-size: 16px; margin-bottom: 24px; text-align: center; }
-
     .auth-form { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 340px; }
     .auth-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); }
-
     .btn-primary {
       background: var(--primary); color: #000; font-weight: 700; font-size: 16px;
       padding: 14px; border-radius: 12px; width: 100%; transition: opacity 0.15s;
     }
     .btn-primary:hover:not(:disabled) { opacity: 0.85; }
     .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
-
     .join-room-badge {
       background: var(--surface2); border-radius: 8px; padding: 10px 14px;
       font-size: 13px; color: var(--text-muted); width: 100%; max-width: 340px;
@@ -77,10 +66,7 @@
     /* ============================================================
        ROOM SCREEN — SHELL
     ============================================================ */
-    #screen-room {
-      display: none; flex-direction: column;
-      height: 100dvh; height: 100vh; overflow: hidden;
-    }
+    #screen-room { display: none; flex-direction: column; height: 100dvh; height: 100vh; overflow: hidden; }
     #screen-room.active { display: flex; }
 
     /* Header */
@@ -92,31 +78,18 @@
     #share-btn {
       display: flex; align-items: center; gap: 5px;
       background: var(--surface2); border-radius: 8px; padding: 6px 10px;
-      font-size: 13px; font-weight: 600; flex-shrink: 0;
-      transition: background 0.1s; white-space: nowrap;
+      font-size: 13px; font-weight: 600; flex-shrink: 0; transition: background 0.1s; white-space: nowrap;
     }
     #share-btn:hover { background: var(--border); }
-    #users-bar {
-      flex: 1; display: flex; align-items: center; gap: 6px;
-      overflow-x: auto; scrollbar-width: none; min-width: 0;
-    }
+    #users-bar { flex: 1; display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: none; min-width: 0; }
     #users-bar::-webkit-scrollbar { display: none; }
-    .u-badge {
-      display: flex; align-items: center; gap: 5px;
-      background: var(--surface2); border-radius: 20px;
-      padding: 3px 9px 3px 3px; flex-shrink: 0; white-space: nowrap;
-    }
+    .u-badge { display: flex; align-items: center; gap: 5px; background: var(--surface2); border-radius: 20px; padding: 3px 9px 3px 3px; flex-shrink: 0; white-space: nowrap; }
     .u-badge.me { border: 1.5px solid var(--primary); }
-    .u-avatar {
-      width: 22px; height: 22px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 10px; font-weight: 700; flex-shrink: 0;
-    }
+    .u-avatar { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; }
     .u-name { font-size: 12px; font-weight: 500; }
 
     /* Main content */
     #room-main { flex: 1; overflow: hidden; position: relative; }
-
     .panel { position: absolute; inset: 0; overflow-y: auto; display: none; padding: 12px; }
     .panel.active { display: block; }
 
@@ -132,28 +105,14 @@
     #pb-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     #pb-artist { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .pb-controls { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
-    .pb-btn {
-      width: 38px; height: 38px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 18px; transition: background 0.1s;
-    }
+    .pb-btn { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: background 0.1s; }
     .pb-btn:hover { background: var(--surface2); }
-    #pb-playpause {
-      background: var(--primary); color: #000; font-size: 16px; font-weight: 700;
-    }
+    #pb-playpause { background: var(--primary); color: #000; font-size: 16px; font-weight: 700; }
     #pb-playpause:hover { opacity: 0.85; background: var(--primary); }
 
-    /* Tab bar */
-    #tab-bar {
-      flex-shrink: 0; height: var(--tabbar-h);
-      background: var(--surface); border-top: 1px solid var(--border);
-      display: flex;
-    }
-    .tab-btn {
-      flex: 1; display: flex; flex-direction: column; align-items: center;
-      justify-content: center; gap: 2px; font-size: 11px; color: var(--text-muted);
-      transition: color 0.15s;
-    }
+    /* Tab bar (mobile) */
+    #tab-bar { flex-shrink: 0; height: var(--tabbar-h); background: var(--surface); border-top: 1px solid var(--border); display: flex; }
+    .tab-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 11px; color: var(--text-muted); transition: color 0.15s; }
     .tab-btn .ti { font-size: 20px; }
     .tab-btn.active { color: var(--primary); }
 
@@ -162,183 +121,125 @@
     ============================================================ */
     .search-wrap { position: relative; margin-bottom: 12px; }
     .search-wrap input { padding-left: 38px; }
-    .search-icon {
-      position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
-      color: var(--text-muted); font-size: 15px; pointer-events: none;
-    }
+    .search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 15px; pointer-events: none; }
     .hint-box { text-align: center; padding: 48px 16px; color: var(--text-muted); }
     .hint-box .hi { font-size: 36px; margin-bottom: 10px; }
     .hint-box p { font-size: 14px; line-height: 1.5; }
-
     .spinner-wrap { text-align: center; padding: 36px; color: var(--text-muted); font-size: 13px; }
-    .spinner {
-      width: 28px; height: 28px; border: 3px solid var(--border);
-      border-top-color: var(--primary); border-radius: 50%;
-      animation: spin 0.65s linear infinite; margin: 0 auto 10px;
-    }
+    .spinner { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.65s linear infinite; margin: 0 auto 10px; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    .result-card {
-      display: flex; align-items: center; gap: 10px;
-      padding: 8px; border-radius: 10px; margin-bottom: 4px;
-      cursor: pointer; transition: background 0.1s;
-    }
+    .result-card { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 10px; margin-bottom: 4px; cursor: pointer; transition: background 0.1s; }
     .result-card:hover, .result-card:active { background: var(--surface2); }
-    .result-thumb {
-      width: 88px; height: 58px; object-fit: cover;
-      border-radius: 6px; flex-shrink: 0; background: var(--surface2);
-    }
+    .result-thumb { width: 88px; height: 58px; object-fit: cover; border-radius: 6px; flex-shrink: 0; background: var(--surface2); }
     .result-info { flex: 1; min-width: 0; }
-    .result-title {
-      font-size: 13px; font-weight: 500; line-height: 1.35;
-      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-      overflow: hidden; margin-bottom: 3px;
-    }
+    .result-title { font-size: 13px; font-weight: 500; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 3px; }
     .result-ch { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .add-btn {
-      width: 34px; height: 34px; border-radius: 50%; background: var(--primary);
-      color: #000; font-size: 22px; font-weight: 700; display: flex;
-      align-items: center; justify-content: center; flex-shrink: 0;
-      line-height: 1; transition: opacity 0.1s, transform 0.1s;
-    }
+    .add-btn { width: 34px; height: 34px; border-radius: 50%; background: var(--primary); color: #000; font-size: 22px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; line-height: 1; transition: opacity 0.1s, transform 0.1s; }
     .add-btn:hover { opacity: 0.85; transform: scale(1.08); }
 
     /* ============================================================
        QUEUE PANEL
     ============================================================ */
+
+    /* Queue type tabs (Room / For You) */
+    .q-tabs { display: flex; background: var(--surface2); border-radius: 10px; padding: 3px; gap: 3px; margin-bottom: 12px; }
+    .q-tab {
+      flex: 1; padding: 7px 4px; border-radius: 8px; font-size: 13px; font-weight: 600;
+      color: var(--text-muted); transition: background 0.15s, color 0.15s; text-align: center;
+    }
+    .q-tab.active { background: var(--surface); color: var(--text); }
+    .q-tab-badge {
+      display: inline-block; background: var(--primary); color: #000;
+      border-radius: 10px; font-size: 10px; font-weight: 700;
+      padding: 1px 5px; margin-left: 4px; vertical-align: middle;
+    }
+
     .q-empty { text-align: center; padding: 60px 16px; color: var(--text-muted); }
     .q-empty .hi { font-size: 36px; margin-bottom: 10px; }
     .q-empty p { font-size: 14px; line-height: 1.5; }
-
-    .section-label {
-      font-size: 11px; font-weight: 600; text-transform: uppercase;
-      letter-spacing: 0.6px; color: var(--text-muted); padding: 14px 4px 6px;
-    }
+    .section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); padding: 14px 4px 6px; }
 
     .song-card {
       display: flex; align-items: center; gap: 8px;
       background: var(--surface); border-radius: 12px;
       padding: 8px; margin-bottom: 6px; cursor: default;
       border: 1px solid transparent; transition: border-color 0.15s, background 0.1s;
-      position: relative;
     }
     .song-card.playing { border-color: var(--primary); background: var(--surface2); }
     .song-card.listened { opacity: 0.45; }
-
-    .drag-handle {
-      color: var(--text-muted); font-size: 16px; cursor: grab;
-      padding: 4px 2px; flex-shrink: 0; touch-action: none; user-select: none;
-    }
+    .drag-handle { color: var(--text-muted); font-size: 16px; cursor: grab; padding: 4px 2px; flex-shrink: 0; touch-action: none; user-select: none; }
     .drag-handle:active { cursor: grabbing; }
-
     .st-wrap { position: relative; flex-shrink: 0; cursor: pointer; }
     .song-thumb { width: 54px; height: 40px; object-fit: cover; border-radius: 5px; background: var(--surface2); }
-    .play-overlay {
-      position: absolute; inset: 0; background: rgba(0,0,0,0.55);
-      display: flex; align-items: center; justify-content: center;
-      border-radius: 5px; font-size: 14px; opacity: 0; transition: opacity 0.15s;
-    }
+    .play-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; border-radius: 5px; font-size: 14px; opacity: 0; transition: opacity 0.15s; }
     .song-card:hover .play-overlay { opacity: 1; }
-    .now-dot {
-      position: absolute; bottom: 3px; right: 3px;
-      width: 7px; height: 7px; border-radius: 50%; background: var(--primary);
-    }
-
+    .now-dot { position: absolute; bottom: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--primary); }
     .song-info { flex: 1; min-width: 0; }
     .song-title { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
     .song-meta { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .song-from { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
-
     .s-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
-    .icon-btn {
-      width: 30px; height: 30px; border-radius: 7px;
-      display: flex; align-items: center; justify-content: center;
-      color: var(--text-muted); font-size: 14px; transition: background 0.1s, color 0.1s;
-    }
+    .icon-btn { width: 30px; height: 30px; border-radius: 7px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 14px; transition: background 0.1s, color 0.1s; }
     .icon-btn:hover { background: var(--border); color: var(--text); }
     .icon-btn.on { color: var(--primary); }
     .icon-btn.del:hover { background: rgba(255,69,58,0.15); color: var(--danger); }
-
-    /* Sortable */
     .sortable-ghost { opacity: 0.35; }
     .sortable-drag { opacity: 0.95; }
 
     /* ============================================================
-       RECIPIENT MODAL (bottom sheet)
+       DESTINATION PICKER MODAL (bottom sheet)
     ============================================================ */
     .modal { position: fixed; inset: 0; z-index: 500; display: flex; align-items: flex-end; }
     .modal.hidden { display: none; }
     .modal-bd { position: absolute; inset: 0; background: rgba(0,0,0,0.65); }
-    .modal-sheet {
-      position: relative; background: var(--surface); border-radius: 20px 20px 0 0;
-      width: 100%; padding: 16px 16px 24px; max-height: 85vh; overflow-y: auto;
-    }
-    .sheet-handle {
-      width: 36px; height: 4px; background: var(--border);
-      border-radius: 2px; margin: 0 auto 16px;
-    }
+    .modal-sheet { position: relative; background: var(--surface); border-radius: 20px 20px 0 0; width: 100%; padding: 16px 16px 24px; max-height: 85vh; overflow-y: auto; }
+    .sheet-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 16px; }
     .sheet-title { font-weight: 700; font-size: 18px; margin-bottom: 3px; }
     .sheet-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 14px; }
-
-    .song-preview {
-      display: flex; align-items: center; gap: 10px;
-      background: var(--surface2); border-radius: 10px; padding: 10px; margin-bottom: 14px;
-    }
+    .song-preview { display: flex; align-items: center; gap: 10px; background: var(--surface2); border-radius: 10px; padding: 10px; margin-bottom: 14px; }
     .song-preview img { width: 50px; height: 37px; object-fit: cover; border-radius: 4px; flex-shrink: 0; }
+    .sp-info { min-width: 0; }
     .sp-title { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .sp-ch { font-size: 12px; color: var(--text-muted); }
-    .sp-info { min-width: 0; }
 
-    .recipient-item {
+    /* Room queue option (special first item) */
+    .dest-room-item {
       display: flex; align-items: center; gap: 12px;
-      padding: 11px 10px; border-radius: 10px; cursor: pointer;
-      transition: background 0.1s; margin-bottom: 3px;
+      padding: 12px 10px; border-radius: 10px; cursor: pointer;
+      transition: background 0.1s; margin-bottom: 4px;
+      border: 1.5px solid var(--primary);
     }
-    .recipient-item:hover, .recipient-item:active { background: var(--surface2); }
-    .r-avatar {
-      width: 40px; height: 40px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 700; font-size: 17px; flex-shrink: 0;
-    }
-    .r-name { font-weight: 500; font-size: 15px; }
+    .dest-room-item:hover { background: rgba(48,209,88,0.08); }
+    .dest-room-icon { width: 40px; height: 40px; border-radius: 50%; background: rgba(48,209,88,0.15); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .dest-room-label { font-weight: 600; font-size: 15px; color: var(--primary); }
+    .dest-room-sub { font-size: 12px; color: var(--text-muted); }
 
-    .sheet-cancel {
-      width: 100%; padding: 14px; border-radius: 12px;
-      background: var(--surface2); font-weight: 600; font-size: 16px;
-      margin-top: 10px; transition: opacity 0.1s;
-    }
+    .dest-divider { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); padding: 12px 4px 6px; }
+
+    .recipient-item { display: flex; align-items: center; gap: 12px; padding: 11px 10px; border-radius: 10px; cursor: pointer; transition: background 0.1s; margin-bottom: 3px; }
+    .recipient-item:hover, .recipient-item:active { background: var(--surface2); }
+    .r-avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 17px; flex-shrink: 0; }
+    .r-name { font-weight: 500; font-size: 15px; }
+    .r-sub { font-size: 12px; color: var(--text-muted); }
+
+    .sheet-cancel { width: 100%; padding: 14px; border-radius: 12px; background: var(--surface2); font-weight: 600; font-size: 16px; margin-top: 10px; transition: opacity 0.1s; }
     .sheet-cancel:hover { opacity: 0.8; }
 
     /* ============================================================
        TOAST
     ============================================================ */
-    #toast {
-      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-      background: #3a3a3c; color: var(--text); padding: 9px 18px;
-      border-radius: 20px; font-size: 13px; font-weight: 500;
-      z-index: 900; opacity: 0; transition: opacity 0.2s;
-      pointer-events: none; white-space: nowrap; max-width: 90vw;
-    }
+    #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #3a3a3c; color: var(--text); padding: 9px 18px; border-radius: 20px; font-size: 13px; font-weight: 500; z-index: 900; opacity: 0; transition: opacity 0.2s; pointer-events: none; white-space: nowrap; max-width: 90vw; }
     #toast.show { opacity: 1; }
 
     /* ============================================================
        DESKTOP LAYOUT (768px+)
     ============================================================ */
     @media (min-width: 768px) {
-      #room-main {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-      }
-      .panel {
-        position: static !important;
-        display: block !important;
-        border-right: 1px solid var(--border);
-        overflow-y: auto;
-        height: 100%;
-      }
+      #room-main { display: grid; grid-template-columns: 1fr 1fr; }
+      .panel { position: static !important; display: block !important; border-right: 1px solid var(--border); overflow-y: auto; height: 100%; }
       #panel-queue { border-right: none; }
       #tab-bar { display: none; }
-      #player-bar { border-top: 1px solid var(--border); }
     }
   </style>
 </head>
@@ -388,7 +289,7 @@
   <!-- Main panels -->
   <div id="room-main">
 
-    <!-- Search -->
+    <!-- Search panel -->
     <div id="panel-search" class="panel active">
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
@@ -397,21 +298,43 @@
       <div id="search-results">
         <div class="hint-box">
           <div class="hi">🎵</div>
-          <p>Search for a song and send it<br>to someone in the room</p>
+          <p>Search for a song, then choose<br>the room queue or a person to send it to</p>
         </div>
       </div>
     </div>
 
-    <!-- Queue -->
+    <!-- Queue panel -->
     <div id="panel-queue" class="panel">
-      <div id="q-unlistened"><!-- draggable cards --></div>
-      <div id="q-listened-section" style="display:none">
-        <div class="section-label">Listened</div>
-        <div id="q-listened"><!-- listened cards --></div>
+      <!-- Room / For You tabs -->
+      <div class="q-tabs">
+        <button class="q-tab active" data-qtab="room">🌐 Room Queue</button>
+        <button class="q-tab" data-qtab="mine">📬 For You <span id="mine-badge" class="q-tab-badge" style="display:none">0</span></button>
       </div>
-      <div id="q-empty" class="q-empty" style="display:none">
-        <div class="hi">🎶</div>
-        <p>Your queue is empty.<br>Ask someone to send you a song!</p>
+
+      <!-- Room queue content -->
+      <div id="qt-room">
+        <div id="q-unlistened"></div>
+        <div id="q-listened-section" style="display:none">
+          <div class="section-label">Listened</div>
+          <div id="q-listened"></div>
+        </div>
+        <div id="q-empty" class="q-empty" style="display:none">
+          <div class="hi">🎶</div>
+          <p>The room queue is empty.<br>Search for a song to add!</p>
+        </div>
+      </div>
+
+      <!-- Personal "For You" queue content -->
+      <div id="qt-mine" style="display:none">
+        <div id="qm-unlistened"></div>
+        <div id="qm-listened-section" style="display:none">
+          <div class="section-label">Listened</div>
+          <div id="qm-listened"></div>
+        </div>
+        <div id="qm-empty" class="q-empty" style="display:none">
+          <div class="hi">📬</div>
+          <p>Nothing here yet.<br>Ask someone to send you a song!</p>
+        </div>
       </div>
     </div>
 
@@ -433,38 +356,44 @@
 
   <!-- Tab bar (mobile) -->
   <nav id="tab-bar">
-    <button class="tab-btn active" data-tab="search">
-      <span class="ti">🔍</span>Search
-    </button>
-    <button class="tab-btn" data-tab="queue">
-      <span class="ti">🎵</span>Queue
-    </button>
+    <button class="tab-btn active" data-tab="search"><span class="ti">🔍</span>Search</button>
+    <button class="tab-btn" data-tab="queue"><span class="ti">🎵</span>Queue</button>
   </nav>
 
 </div><!-- /screen-room -->
 
-<!-- Hidden YouTube player container (always in DOM) -->
+<!-- Hidden YouTube player (always in DOM) -->
 <div id="yt-wrap" style="position:fixed;width:1px;height:1px;overflow:hidden;bottom:0;right:0;z-index:-1;opacity:0">
   <div id="yt-player"></div>
 </div>
 
 <!-- ============================================================
-     RECIPIENT MODAL
+     DESTINATION PICKER MODAL
 ============================================================ -->
-<div id="recipient-modal" class="modal hidden">
+<div id="dest-modal" class="modal hidden">
   <div class="modal-bd" id="modal-bd"></div>
   <div class="modal-sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Send to…</div>
-    <div class="sheet-sub">Choose who receives this song</div>
-    <div class="song-preview" id="modal-preview">
+    <div class="sheet-title">Add to…</div>
+    <div class="sheet-sub">Send to the room queue or to someone directly</div>
+    <div class="song-preview">
       <img id="modal-thumb" src="" alt="">
       <div class="sp-info">
         <div class="sp-title" id="modal-song-title"></div>
         <div class="sp-ch" id="modal-song-ch"></div>
       </div>
     </div>
-    <div id="recipient-list"><!-- injected --></div>
+    <!-- Room queue option -->
+    <div id="dest-room-btn" class="dest-room-item">
+      <div class="dest-room-icon">🌐</div>
+      <div>
+        <div class="dest-room-label">Room Queue</div>
+        <div class="dest-room-sub">Everyone in the room sees it</div>
+      </div>
+    </div>
+    <!-- Users -->
+    <div class="dest-divider">Send to someone directly</div>
+    <div id="dest-users"><!-- injected --></div>
     <button class="sheet-cancel" id="modal-cancel">Cancel</button>
   </div>
 </div>
@@ -483,20 +412,17 @@
 
 <script>
 /* =============================================================
-   CONFIGURATION
-   Replace these placeholders with your real values before deploying.
-   See README / spec for setup instructions.
+   CONFIGURATION — fill in before deploying
 ============================================================= */
 const firebaseConfig = {
   apiKey: "AIzaSyDgdk47mX291Nd8Ub4609Vi5vRyPQSxYXY",
   authDomain: "music-sharing-thing.firebaseapp.com",
-  databaseURL: "https://music-sharing-thing-default-rtdb.firebaseio.com", // ← add this from Firebase Console > Realtime Database
+  databaseURL: "https://music-sharing-thing-default-rtdb.firebaseio.com",
   projectId: "music-sharing-thing",
   storageBucket: "music-sharing-thing.firebasestorage.app",
   messagingSenderId: "585108233467",
   appId: "1:585108233467:web:69087044c17ade0e4b245e"
 };
-
 
 const YOUTUBE_API_KEY = "AIzaSyDfa98VU-MmZ8AUsnH3H4Fa-NlikKWpgEQ";
 
@@ -506,40 +432,41 @@ const YOUTUBE_API_KEY = "AIzaSyDfa98VU-MmZ8AUsnH3H4Fa-NlikKWpgEQ";
 firebase.initializeApp(firebaseConfig);
 const db   = firebase.database();
 const auth = firebase.auth();
-const SV   = firebase.database.ServerValue; // ServerValue.TIMESTAMP
+const SV   = firebase.database.ServerValue;
 
 /* =============================================================
    STATE
 ============================================================= */
 const state = {
-  roomId:      null,
-  userId:      null,
-  userName:    null,
-  users:       {},   // { uid: { name, joinedAt } }
-  queue:       {},   // { songId: { ...fields } }
-  currentSong: null, // { ...fields, _id }
-  isPlaying:   false,
-  activeTab:   'search',
-  pendingSong:  null, // song waiting for recipient selection
+  roomId:        null,
+  userId:        null,
+  userName:      null,
+  users:         {},  // { uid: { name, joinedAt } }
+  sharedQueue:   {},  // rooms/{roomId}/queue           — everyone sees
+  personalQueue: {},  // rooms/{roomId}/queues/{myUid}  — sent just to me
+  currentSong:   null,
+  currentQtype:  'room', // which queue the playing song came from
+  isPlaying:     false,
+  activeTab:     'search',
+  activeQueueTab:'room', // 'room' | 'mine'
+  pendingSong:   null,
 };
 
-let sortableInst = null;
+let sortableRoom = null;
+let sortableMine = null;
 
 /* =============================================================
    YOUTUBE PLAYER
 ============================================================= */
-let ytPlayer  = null;
-let ytReady   = false;
+let ytPlayer = null;
+let ytReady  = false;
 
 window.onYouTubeIframeAPIReady = function () {
   ytPlayer = new YT.Player('yt-player', {
     width: 1, height: 1, videoId: '',
     playerVars: { autoplay: 1, playsinline: 1, controls: 0 },
     events: {
-      onReady: () => {
-        ytReady = true;
-        if (state.currentSong) _ytLoad(state.currentSong.youtubeVideoId);
-      },
+      onReady:       () => { ytReady = true; if (state.currentSong) _ytLoad(state.currentSong.youtubeVideoId); },
       onStateChange: onYTState,
     },
   });
@@ -550,47 +477,41 @@ function onYTState(e) {
   state.isPlaying = (e.data === YT.PlayerState.PLAYING);
   _updatePPBtn();
 }
+function _ytLoad(videoId) { if (ytReady && ytPlayer) ytPlayer.loadVideoById(videoId); }
+function _updatePPBtn() { document.getElementById('pb-playpause').textContent = state.isPlaying ? '⏸' : '▶'; }
 
-function _ytLoad(videoId) {
-  if (ytReady && ytPlayer) ytPlayer.loadVideoById(videoId);
-}
-
-function _updatePPBtn() {
-  document.getElementById('pb-playpause').textContent = state.isPlaying ? '⏸' : '▶';
-}
-
-function playSong(song) {
-  state.currentSong = song;
+function playSong(song, qtype) {
+  state.currentSong  = song;
+  state.currentQtype = qtype;
   _ytLoad(song.youtubeVideoId);
   state.isPlaying = true;
   _updatePPBtn();
-  // Update player bar
-  const bar = document.getElementById('player-bar');
-  bar.classList.remove('hidden');
-  document.getElementById('pb-thumb').src   = song.thumbnail || '';
-  document.getElementById('pb-title').textContent  = song.title || '';
-  document.getElementById('pb-artist').textContent = song.artist || '';
-  renderQueue(); // refresh playing state in queue
+  document.getElementById('player-bar').classList.remove('hidden');
+  document.getElementById('pb-thumb').src              = song.thumbnail || '';
+  document.getElementById('pb-title').textContent      = song.title || '';
+  document.getElementById('pb-artist').textContent     = song.artist || '';
+  renderQueues();
 }
 
 function advanceQueue() {
-  const list = _unlistened();
+  const list = _unlistened(state.currentQtype);
   if (!list.length) return;
   const idx  = state.currentSong ? list.findIndex(s => s._id === state.currentSong._id) : -1;
   const next = list[idx + 1];
-  if (next) { playSong(next); markListened(next._id); }
+  if (next) { playSong(next, state.currentQtype); markListened(next._id, state.currentQtype); }
 }
 
 function _prevSong() {
-  const list = _unlistened();
+  const list = _unlistened(state.currentQtype);
   if (!list.length) return;
   const idx  = state.currentSong ? list.findIndex(s => s._id === state.currentSong._id) : 1;
   const prev = list[Math.max(0, idx - 1)];
-  if (prev) playSong(prev);
+  if (prev) playSong(prev, state.currentQtype);
 }
 
-function _unlistened() {
-  return Object.entries(state.queue)
+function _unlistened(qtype) {
+  const q = qtype === 'room' ? state.sharedQueue : state.personalQueue;
+  return Object.entries(q)
     .map(([id, s]) => ({ ...s, _id: id }))
     .filter(s => !s.listened)
     .sort((a, b) => (a.order ?? a.addedAt ?? 0) - (b.order ?? b.addedAt ?? 0));
@@ -603,118 +524,98 @@ function genRoomId() {
   const a = 'abcdefghjkmnpqrstuvwxyz23456789';
   return Array.from({ length: 10 }, () => a[Math.random() * a.length | 0]).join('');
 }
-function genSongId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-}
+function genSongId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 function initial(name) { return (name || '?').charAt(0).toUpperCase(); }
 function uidColor(uid) {
-  const palette = ['#ff6b6b','#ffa94d','#ffd43b','#69db7c','#4dabf7','#da77f2','#f783ac','#63e6be','#74c0fc'];
+  const p = ['#ff6b6b','#ffa94d','#ffd43b','#69db7c','#4dabf7','#da77f2','#f783ac','#63e6be','#74c0fc'];
   let h = 0;
   for (const c of (uid || '')) h = ((h << 5) - h + c.charCodeAt(0)) | 0;
-  return palette[Math.abs(h) % palette.length];
+  return p[Math.abs(h) % p.length];
 }
 function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
                   .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
-
 let _toastT;
 function toast(msg, ms = 2600) {
   const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  clearTimeout(_toastT);
-  _toastT = setTimeout(() => el.classList.remove('show'), ms);
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(_toastT); _toastT = setTimeout(() => el.classList.remove('show'), ms);
 }
-
 function showScreen(id) {
   ['screen-create','screen-join','screen-room'].forEach(sid => {
     document.getElementById(sid).classList.toggle('active', sid === id);
   });
+}
+function dbPath(songId, qtype, ownerId) {
+  if (qtype === 'room') return `rooms/${state.roomId}/queue/${songId}`;
+  return `rooms/${state.roomId}/queues/${ownerId || state.userId}/${songId}`;
 }
 
 /* =============================================================
    INIT / ROUTING
 ============================================================= */
 async function init() {
-  // Validate config
   if (firebaseConfig.apiKey === 'YOUR_FIREBASE_API_KEY') {
     showScreen('screen-create');
     document.getElementById('create-btn').textContent = '⚠ Add Firebase config first';
     return;
   }
-
   let user;
   try {
     const cred = await auth.signInAnonymously();
     user = cred.user;
   } catch (e) {
-    toast('Auth error — check Firebase config');
-    showScreen('screen-create');
-    return;
+    toast('Auth error — check Firebase config'); showScreen('screen-create'); return;
   }
   state.userId = user.uid;
 
   const params = new URLSearchParams(window.location.search);
   const roomId = params.get('room');
-
   if (!roomId) { showScreen('screen-create'); return; }
 
   state.roomId = roomId;
   document.getElementById('join-room-id-text').textContent = roomId;
 
-  // Check if already a member
   try {
     const snap = await db.ref(`rooms/${roomId}/users/${user.uid}`).get();
     if (snap.exists()) {
       state.userName = snap.val().name;
       localStorage.setItem(`musicq_room_${roomId}`, user.uid);
-      enterRoom();
-      return;
+      enterRoom(); return;
     }
-  } catch (_) { /* room may not exist yet */ }
-
+  } catch (_) {}
   showScreen('screen-join');
 }
 
 /* =============================================================
-   CREATE ROOM
+   CREATE / JOIN ROOM
 ============================================================= */
 async function createRoom(name) {
   const roomId = genRoomId();
   try {
-    await db.ref(`rooms/${roomId}/users/${state.userId}`).set({
-      name, joinedAt: SV.TIMESTAMP, lastAddedAt: 0,
-    });
-    state.roomId   = roomId;
-    state.userName = name;
+    await db.ref(`rooms/${roomId}/users/${state.userId}`).set({ name, joinedAt: SV.TIMESTAMP, lastAddedAt: 0 });
+    state.roomId = roomId; state.userName = name;
     localStorage.setItem(`musicq_room_${roomId}`, state.userId);
     const u = new URL(location.href);
     u.searchParams.set('room', roomId);
     history.pushState({}, '', u.toString());
     enterRoom();
   } catch (e) {
-    console.error(e);
-    toast('Failed to create room — check Firebase config');
+    console.error(e); toast('Failed to create room — check Firebase config');
     document.getElementById('create-btn').disabled = false;
     document.getElementById('create-btn').textContent = 'Create a Room';
   }
 }
 
-/* =============================================================
-   JOIN ROOM
-============================================================= */
 async function joinRoom(roomId, name) {
   try {
-    await db.ref(`rooms/${roomId}/users/${state.userId}`).set({
-      name, joinedAt: SV.TIMESTAMP, lastAddedAt: 0,
-    });
+    await db.ref(`rooms/${roomId}/users/${state.userId}`).set({ name, joinedAt: SV.TIMESTAMP, lastAddedAt: 0 });
     state.userName = name;
     localStorage.setItem(`musicq_room_${roomId}`, state.userId);
     enterRoom();
   } catch (e) {
-    console.error(e);
-    toast('Failed to join — room may not exist');
+    console.error(e); toast('Failed to join — room may not exist');
     document.getElementById('join-btn').disabled = false;
     document.getElementById('join-btn').textContent = 'Join Room';
   }
@@ -727,7 +628,7 @@ function enterRoom() {
   showScreen('screen-room');
   document.getElementById('share-room-id').textContent = state.roomId;
   setupUsersListener();
-  setupQueueListener();
+  setupQueueListeners();
 }
 
 /* =============================================================
@@ -740,15 +641,21 @@ function setupUsersListener() {
   });
 }
 
-function setupQueueListener() {
+function setupQueueListeners() {
+  // Shared room queue
+  db.ref(`rooms/${state.roomId}/queue`).on('value', snap => {
+    state.sharedQueue = snap.val() || {};
+    renderQueues();
+  });
+  // Personal queue (songs sent directly to me)
   db.ref(`rooms/${state.roomId}/queues/${state.userId}`).on('value', snap => {
-    state.queue = snap.val() || {};
-    renderQueue();
+    state.personalQueue = snap.val() || {};
+    renderQueues();
   });
 }
 
 /* =============================================================
-   RENDER USERS (header badges)
+   RENDER USERS
 ============================================================= */
 function renderUsers() {
   const bar = document.getElementById('users-bar');
@@ -765,24 +672,33 @@ function renderUsers() {
 }
 
 /* =============================================================
-   RENDER QUEUE
+   RENDER QUEUES
 ============================================================= */
-function renderQueue() {
-  const all = Object.entries(state.queue).map(([id, s]) => ({ ...s, _id: id }));
-  const unlistened = all.filter(s => !s.listened)
-    .sort((a, b) => (a.order ?? a.addedAt ?? 0) - (b.order ?? b.addedAt ?? 0));
-  const listened = all.filter(s => s.listened)
-    .sort((a, b) => (a.order ?? a.addedAt ?? 0) - (b.order ?? b.addedAt ?? 0));
+function renderQueues() {
+  _renderOneQueue('room',  state.sharedQueue,   'q-unlistened',  'q-listened',  'q-listened-section',  'q-empty',  sortableRoom, s => { sortableRoom = s; });
+  _renderOneQueue('mine',  state.personalQueue,  'qm-unlistened', 'qm-listened', 'qm-listened-section', 'qm-empty', sortableMine, s => { sortableMine = s; });
 
-  const qUn = document.getElementById('q-unlistened');
-  const qLi = document.getElementById('q-listened');
-  const liSec = document.getElementById('q-listened-section');
-  const empty = document.getElementById('q-empty');
+  // Update "For You" badge
+  const unread = Object.values(state.personalQueue).filter(s => !s.listened).length;
+  const badge  = document.getElementById('mine-badge');
+  badge.textContent    = unread;
+  badge.style.display  = unread > 0 ? 'inline-block' : 'none';
+}
 
-  qUn.innerHTML  = unlistened.map(songCard).join('');
-  qLi.innerHTML  = listened.map(songCard).join('');
-  liSec.style.display = listened.length   ? 'block' : 'none';
-  empty.style.display = all.length === 0  ? 'block' : 'none';
+function _renderOneQueue(qtype, queue, unlistId, listenedId, liSecId, emptyId, currentSortable, setSortable) {
+  const all       = Object.entries(queue).map(([id, s]) => ({ ...s, _id: id }));
+  const unlistened = all.filter(s => !s.listened).sort((a,b) => (a.order??a.addedAt??0)-(b.order??b.addedAt??0));
+  const listened   = all.filter(s =>  s.listened).sort((a,b) => (a.order??a.addedAt??0)-(b.order??b.addedAt??0));
+
+  const qUn   = document.getElementById(unlistId);
+  const qLi   = document.getElementById(listenedId);
+  const liSec = document.getElementById(liSecId);
+  const empty = document.getElementById(emptyId);
+
+  qUn.innerHTML  = unlistened.map(s => songCard(s, qtype)).join('');
+  qLi.innerHTML  = listened.map(s => songCard(s, qtype)).join('');
+  liSec.style.display = listened.length > 0    ? 'block' : 'none';
+  empty.style.display = all.length === 0       ? 'block' : 'none';
 
   // Bind events
   [qUn, qLi].forEach(el => {
@@ -790,37 +706,36 @@ function renderQueue() {
       w.addEventListener('click', () => {
         const card = w.closest('.song-card');
         const id   = card.dataset.id;
-        const song = { ...state.queue[id], _id: id };
-        playSong(song);
-        markListened(id);
+        const qt   = card.dataset.qtype;
+        const q    = qt === 'room' ? state.sharedQueue : state.personalQueue;
+        const song = { ...q[id], _id: id };
+        playSong(song, qt);
+        markListened(id, qt);
         switchTab('queue');
       });
     });
     el.querySelectorAll('.btn-listened').forEach(b => {
-      b.addEventListener('click', e => { e.stopPropagation(); toggleListened(b.dataset.id); });
+      b.addEventListener('click', e => { e.stopPropagation(); toggleListened(b.dataset.id, b.dataset.qtype); });
     });
     el.querySelectorAll('.btn-delete').forEach(b => {
-      b.addEventListener('click', e => { e.stopPropagation(); deleteSong(b.dataset.id); });
+      b.addEventListener('click', e => { e.stopPropagation(); deleteSong(b.dataset.id, b.dataset.qtype); });
     });
   });
 
-  // Drag-and-drop on unlistened
-  if (sortableInst) { sortableInst.destroy(); sortableInst = null; }
-  if (unlistened.length > 1) {
-    sortableInst = Sortable.create(qUn, {
-      handle: '.drag-handle',
-      animation: 140,
-      ghostClass: 'sortable-ghost',
-      dragClass:  'sortable-drag',
-      onEnd: reorderQueue,
-    });
-  }
+  // Drag-and-drop (only on unlistened section)
+  if (currentSortable) { currentSortable.destroy(); }
+  const newSortable = unlistened.length > 1 ? Sortable.create(qUn, {
+    handle: '.drag-handle', animation: 140,
+    ghostClass: 'sortable-ghost', dragClass: 'sortable-drag',
+    onEnd: () => reorderQueue(qUn, qtype),
+  }) : null;
+  setSortable(newSortable);
 }
 
-function songCard(song) {
+function songCard(song, qtype) {
   const playing = state.currentSong && state.currentSong._id === song._id;
-  return `<div class="song-card${playing?' playing':''}${song.listened?' listened':''}" data-id="${esc(song._id)}">
-    <div class="drag-handle" title="Drag to reorder">⠿</div>
+  return `<div class="song-card${playing?' playing':''}${song.listened?' listened':''}" data-id="${esc(song._id)}" data-qtype="${qtype}">
+    <div class="drag-handle">⠿</div>
     <div class="st-wrap" title="Play">
       <img class="song-thumb" src="${esc(song.thumbnail||'')}" alt="" loading="lazy">
       <div class="play-overlay">▶</div>
@@ -829,11 +744,11 @@ function songCard(song) {
     <div class="song-info">
       <div class="song-title">${esc(song.title||'')}</div>
       <div class="song-meta">${esc(song.artist||'')}</div>
-      <div class="song-from">from ${esc(song.addedByName||'?')}</div>
+      <div class="song-from">added by ${esc(song.addedByName||'?')}</div>
     </div>
     <div class="s-actions">
-      <button class="icon-btn btn-listened${song.listened?' on':''}" data-id="${esc(song._id)}" title="${song.listened?'Mark unlistened':'Mark listened'}">✓</button>
-      <button class="icon-btn del btn-delete" data-id="${esc(song._id)}" title="Remove">✕</button>
+      <button class="icon-btn btn-listened${song.listened?' on':''}" data-id="${esc(song._id)}" data-qtype="${qtype}" title="${song.listened?'Mark unlistened':'Mark listened'}">✓</button>
+      <button class="icon-btn del btn-delete" data-id="${esc(song._id)}" data-qtype="${qtype}" title="Remove">✕</button>
     </div>
   </div>`;
 }
@@ -841,34 +756,33 @@ function songCard(song) {
 /* =============================================================
    QUEUE OPERATIONS
 ============================================================= */
-function reorderQueue() {
-  const cards = document.querySelectorAll('#q-unlistened .song-card');
+function reorderQueue(container, qtype) {
+  const cards = container.querySelectorAll('.song-card');
   const upd   = {};
   cards.forEach((card, i) => {
-    upd[`rooms/${state.roomId}/queues/${state.userId}/${card.dataset.id}/order`] = i;
+    upd[`${dbPath(card.dataset.id, qtype)}/order`] = i;
   });
   db.ref().update(upd).catch(console.error);
 }
 
-function markListened(songId) {
-  db.ref(`rooms/${state.roomId}/queues/${state.userId}/${songId}/listened`).set(true).catch(console.error);
+function markListened(songId, qtype) {
+  db.ref(`${dbPath(songId, qtype)}/listened`).set(true).catch(console.error);
 }
 
-function toggleListened(songId) {
-  const s = state.queue[songId];
-  if (!s) return;
-  db.ref(`rooms/${state.roomId}/queues/${state.userId}/${songId}/listened`).set(!s.listened).catch(console.error);
+function toggleListened(songId, qtype) {
+  const q = qtype === 'room' ? state.sharedQueue : state.personalQueue;
+  const s = q[songId]; if (!s) return;
+  db.ref(`${dbPath(songId, qtype)}/listened`).set(!s.listened).catch(console.error);
 }
 
-function deleteSong(songId) {
-  if (state.currentSong && state.currentSong._id === songId) {
+function deleteSong(songId, qtype) {
+  if (state.currentSong && state.currentSong._id === songId && state.currentQtype === qtype) {
     if (ytReady && ytPlayer) ytPlayer.stopVideo();
-    state.currentSong = null;
-    state.isPlaying = false;
+    state.currentSong = null; state.isPlaying = false;
     document.getElementById('player-bar').classList.add('hidden');
     _updatePPBtn();
   }
-  db.ref(`rooms/${state.roomId}/queues/${state.userId}/${songId}`).remove().catch(console.error);
+  db.ref(dbPath(songId, qtype)).remove().catch(console.error);
 }
 
 /* =============================================================
@@ -883,7 +797,7 @@ function initSearch() {
     clearTimeout(_searchTimer);
     if (!q) {
       document.getElementById('search-results').innerHTML =
-        `<div class="hint-box"><div class="hi">🎵</div><p>Search for a song and send it<br>to someone in the room</p></div>`;
+        `<div class="hint-box"><div class="hi">🎵</div><p>Search for a song, then choose<br>the room queue or a person to send it to</p></div>`;
       return;
     }
     _searchTimer = setTimeout(() => doSearch(q), 300);
@@ -926,32 +840,23 @@ async function doSearch(query) {
       const vid   = item.id.videoId;
       const s     = item.snippet;
       const thumb = s.thumbnails?.medium?.url || s.thumbnails?.default?.url || '';
-      return `<div class="result-card"
-                   data-vid="${esc(vid)}" data-title="${esc(s.title)}"
-                   data-ch="${esc(s.channelTitle)}" data-thumb="${esc(thumb)}">
+      return `<div class="result-card" data-vid="${esc(vid)}" data-title="${esc(s.title)}" data-ch="${esc(s.channelTitle)}" data-thumb="${esc(thumb)}">
         <img class="result-thumb" src="${esc(thumb)}" alt="" loading="lazy">
         <div class="result-info">
           <div class="result-title">${esc(s.title)}</div>
           <div class="result-ch">${esc(s.channelTitle)}</div>
         </div>
-        <button class="add-btn" title="Send to…">+</button>
+        <button class="add-btn" title="Add…">+</button>
       </div>`;
     }).join('');
 
-    const handler = card => {
-      const song = {
-        youtubeVideoId: card.dataset.vid,
-        title:   card.dataset.title,
-        artist:  card.dataset.ch,
-        thumbnail: card.dataset.thumb,
-      };
-      el.querySelectorAll('.result-card').forEach(c => c.classList.remove('selected'));
-      card.classList.add('selected');
-      openRecipientPicker(song);
-    };
-
     el.querySelectorAll('.result-card').forEach(card => {
-      card.addEventListener('click', () => handler(card));
+      card.addEventListener('click', () => openDestPicker({
+        youtubeVideoId: card.dataset.vid,
+        title:          card.dataset.title,
+        artist:         card.dataset.ch,
+        thumbnail:      card.dataset.thumb,
+      }));
     });
 
   } catch (e) {
@@ -961,90 +866,107 @@ async function doSearch(query) {
 }
 
 /* =============================================================
-   RECIPIENT PICKER
+   DESTINATION PICKER
 ============================================================= */
-function openRecipientPicker(song) {
+function openDestPicker(song) {
   state.pendingSong = song;
 
-  document.getElementById('modal-thumb').src         = song.thumbnail || '';
+  document.getElementById('modal-thumb').src           = song.thumbnail || '';
   document.getElementById('modal-song-title').textContent = song.title || '';
   document.getElementById('modal-song-ch').textContent    = song.artist || '';
 
-  const others = Object.entries(state.users)
-    .filter(([uid]) => uid !== state.userId)
+  // Populate user list (everyone in the room, including yourself)
+  const usersEl = document.getElementById('dest-users');
+  const sorted  = Object.entries(state.users)
     .sort(([,a],[,b]) => (a.joinedAt||0) - (b.joinedAt||0));
 
-  const list = document.getElementById('recipient-list');
-  if (!others.length) {
-    list.innerHTML = `<div class="hint-box" style="padding:20px 0">
-      <div class="hi">👤</div>
-      <p>No other users in the room yet.<br>Share the link to invite friends!</p>
+  if (sorted.length <= 1) {
+    usersEl.innerHTML = `<div style="color:var(--text-muted);font-size:13px;padding:10px 4px">
+      Invite friends to the room to send songs directly to them.
     </div>`;
   } else {
-    list.innerHTML = others.map(([uid, u]) => {
+    usersEl.innerHTML = sorted.map(([uid, u]) => {
+      const me    = uid === state.userId;
       const color = uidColor(uid);
       return `<div class="recipient-item" data-uid="${esc(uid)}">
         <div class="r-avatar" style="background:${color}25;color:${color}">${esc(initial(u.name))}</div>
-        <div class="r-name">${esc(u.name)}</div>
+        <div>
+          <div class="r-name">${esc(u.name)}${me ? ' (you)' : ''}</div>
+          <div class="r-sub">Personal queue</div>
+        </div>
       </div>`;
     }).join('');
-    list.querySelectorAll('.recipient-item').forEach(item => {
+    usersEl.querySelectorAll('.recipient-item').forEach(item => {
       item.addEventListener('click', () => {
-        sendSong(state.pendingSong, item.dataset.uid);
-        closeModal();
+        sendToUser(state.pendingSong, item.dataset.uid);
+        closeDestModal();
       });
     });
   }
 
-  document.getElementById('recipient-modal').classList.remove('hidden');
+  document.getElementById('dest-modal').classList.remove('hidden');
 }
 
-function closeModal() {
-  document.getElementById('recipient-modal').classList.add('hidden');
+function closeDestModal() {
+  document.getElementById('dest-modal').classList.add('hidden');
   state.pendingSong = null;
 }
 
 /* =============================================================
-   SEND SONG
+   ADD TO ROOM QUEUE / SEND TO USER
 ============================================================= */
-async function sendSong(song, recipientId) {
+async function addToRoomQueue(song) {
   const songId = genSongId();
   try {
-    await db.ref(`rooms/${state.roomId}/queues/${recipientId}/${songId}`).set({
-      title:          song.title,
-      artist:         song.artist || '',
-      thumbnail:      song.thumbnail || '',
-      youtubeVideoId: song.youtubeVideoId,
-      addedBy:        state.userId,
-      addedByName:    state.userName,
-      addedAt:        SV.TIMESTAMP,
-      listened:       false,
-      order:          Date.now(),
+    await db.ref(`rooms/${state.roomId}/queue/${songId}`).set({
+      title: song.title, artist: song.artist || '', thumbnail: song.thumbnail || '',
+      youtubeVideoId: song.youtubeVideoId, addedBy: state.userId,
+      addedByName: state.userName, addedAt: SV.TIMESTAMP, listened: false, order: Date.now(),
     });
-    // Update lastAddedAt for rate limiting
-    await db.ref(`rooms/${state.roomId}/users/${state.userId}/lastAddedAt`).set(SV.TIMESTAMP);
-    const name = state.users[recipientId]?.name || 'them';
-    toast(`✓ Sent to ${name}`);
+    toast('✓ Added to room queue');
+    switchTab('queue');
+    switchQueueTab('room');
   } catch (e) {
     console.error(e);
-    if (e.code === 'PERMISSION_DENIED') {
-      toast('⏱ Slow down — wait a moment before sending again');
-    } else {
-      toast('Failed to send. Try again.');
-    }
+    toast(e.code === 'PERMISSION_DENIED' ? '⏱ Permission denied — check rules' : 'Failed to add. Try again.');
+  }
+}
+
+async function sendToUser(song, recipientUid) {
+  const songId = genSongId();
+  const name   = state.users[recipientUid]?.name || 'them';
+  try {
+    await db.ref(`rooms/${state.roomId}/queues/${recipientUid}/${songId}`).set({
+      title: song.title, artist: song.artist || '', thumbnail: song.thumbnail || '',
+      youtubeVideoId: song.youtubeVideoId, addedBy: state.userId,
+      addedByName: state.userName, addedAt: SV.TIMESTAMP, listened: false, order: Date.now(),
+    });
+    await db.ref(`rooms/${state.roomId}/users/${state.userId}/lastAddedAt`).set(SV.TIMESTAMP);
+    const isSelf = recipientUid === state.userId;
+    toast(isSelf ? '✓ Added to your personal queue' : `✓ Sent to ${name}`);
+    switchTab('queue');
+    if (isSelf) switchQueueTab('mine');
+  } catch (e) {
+    console.error(e);
+    toast(e.code === 'PERMISSION_DENIED' ? '⏱ Slow down or check rules' : 'Failed to send. Try again.');
   }
 }
 
 /* =============================================================
-   TAB SWITCHING
+   TAB / QUEUE TAB SWITCHING
 ============================================================= */
 function switchTab(tab) {
   state.activeTab = tab;
-  document.querySelectorAll('.tab-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.tab === tab);
-  });
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.getElementById('panel-search').classList.toggle('active', tab === 'search');
-  document.getElementById('panel-queue').classList.toggle('active', tab === 'queue');
+  document.getElementById('panel-queue').classList.toggle('active',  tab === 'queue');
+}
+
+function switchQueueTab(qtab) {
+  state.activeQueueTab = qtab;
+  document.querySelectorAll('.q-tab').forEach(b => b.classList.toggle('active', b.dataset.qtab === qtab));
+  document.getElementById('qt-room').style.display = qtab === 'room' ? 'block' : 'none';
+  document.getElementById('qt-mine').style.display = qtab === 'mine' ? 'block' : 'none';
 }
 
 /* =============================================================
@@ -1056,19 +978,13 @@ function copyShareLink() {
   const link = url.toString();
   if (navigator.clipboard) {
     navigator.clipboard.writeText(link).then(() => toast('Link copied!')).catch(() => fallbackCopy(link));
-  } else {
-    fallbackCopy(link);
-  }
+  } else { fallbackCopy(link); }
 }
 function fallbackCopy(text) {
   const ta = document.createElement('textarea');
-  ta.value = text;
-  ta.style.cssText = 'position:fixed;opacity:0';
-  document.body.appendChild(ta);
-  ta.select();
-  document.execCommand('copy');
-  document.body.removeChild(ta);
-  toast('Link copied!');
+  ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
+  document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+  document.body.removeChild(ta); toast('Link copied!');
 }
 
 /* =============================================================
@@ -1082,8 +998,7 @@ function bindEvents() {
   cName.addEventListener('keydown', e => { if (e.key==='Enter' && cName.value.trim()) cBtn.click(); });
   cBtn.addEventListener('click', () => {
     const name = cName.value.trim(); if (!name) return;
-    cBtn.disabled = true; cBtn.textContent = 'Creating…';
-    createRoom(name);
+    cBtn.disabled = true; cBtn.textContent = 'Creating…'; createRoom(name);
   });
 
   // Join room
@@ -1093,21 +1008,28 @@ function bindEvents() {
   jName.addEventListener('keydown', e => { if (e.key==='Enter' && jName.value.trim()) jBtn.click(); });
   jBtn.addEventListener('click', () => {
     const name = jName.value.trim(); if (!name) return;
-    jBtn.disabled = true; jBtn.textContent = 'Joining…';
-    joinRoom(state.roomId, name);
+    jBtn.disabled = true; jBtn.textContent = 'Joining…'; joinRoom(state.roomId, name);
   });
 
-  // Tab bar
+  // Main tab bar
   document.querySelectorAll('.tab-btn').forEach(b => {
     b.addEventListener('click', () => switchTab(b.dataset.tab));
+  });
+
+  // Queue type tabs (Room / For You)
+  document.querySelectorAll('.q-tab').forEach(b => {
+    b.addEventListener('click', () => switchQueueTab(b.dataset.qtab));
   });
 
   // Share button
   document.getElementById('share-btn').addEventListener('click', copyShareLink);
 
-  // Modal
-  document.getElementById('modal-bd').addEventListener('click', closeModal);
-  document.getElementById('modal-cancel').addEventListener('click', closeModal);
+  // Destination modal
+  document.getElementById('dest-room-btn').addEventListener('click', () => {
+    addToRoomQueue(state.pendingSong); closeDestModal();
+  });
+  document.getElementById('modal-bd').addEventListener('click', closeDestModal);
+  document.getElementById('modal-cancel').addEventListener('click', closeDestModal);
 
   // Player controls
   document.getElementById('pb-playpause').addEventListener('click', () => {
