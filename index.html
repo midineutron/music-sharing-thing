@@ -106,29 +106,36 @@
     #pb-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     #pb-artist { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .pb-controls { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
-    .pb-btn { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: background 0.1s; }
+    .pb-btn { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background 0.1s; }
+    .pb-btn svg { display: block; }
     .pb-btn:hover { background: var(--surface2); }
-    #pb-playpause { background: var(--primary); color: #000; font-size: 16px; font-weight: 700; }
+    #pb-playpause { background: var(--primary); color: #000; }
     #pb-playpause:hover { opacity: 0.85; background: var(--primary); }
 
     /* Progress / seek bar */
-    .pb-progress-row { display: flex; align-items: center; gap: 8px; padding: 0 12px; }
-    .pb-time { font-size: 11px; color: var(--text-muted); min-width: 30px; font-variant-numeric: tabular-nums; font-family: monospace; flex-shrink: 0; }
+    .pb-progress-row { display: flex; align-items: center; gap: 8px; padding: 0 12px 4px; }
+    .pb-time { font-size: 11px; color: var(--text-muted); min-width: 32px; font-variant-numeric: tabular-nums; font-family: 'SF Mono', ui-monospace, monospace; flex-shrink: 0; }
     #pb-time-dur { text-align: right; }
     #pb-seekbar {
-      flex: 1; height: 4px; background: var(--border); border-radius: 2px;
-      position: relative; cursor: pointer;
+      flex: 1; position: relative; cursor: pointer;
       /* expanded tap/click target */
       padding: 10px 0; margin: -10px 0; box-sizing: content-box;
     }
-    #pb-seekbar-track { height: 4px; border-radius: 2px; background: var(--border); position: relative; overflow: visible; }
-    #pb-fill { height: 4px; background: var(--primary); border-radius: 2px; width: 0%; pointer-events: none; }
-    #pb-handle {
-      position: absolute; top: 50%; transform: translate(-50%, -50%);
-      width: 13px; height: 13px; border-radius: 50%; background: var(--primary);
-      left: 0%; opacity: 0; transition: opacity 0.15s; pointer-events: none;
+    #pb-seekbar-track {
+      height: 3px; border-radius: 99px;
+      background: rgba(255,255,255,0.13);
+      position: relative; overflow: visible;
+      transition: height 0.18s ease;
     }
-    #pb-seekbar:hover #pb-handle { opacity: 1; }
+    #pb-seekbar:hover #pb-seekbar-track { height: 5px; }
+    #pb-fill { height: 100%; background: var(--primary); border-radius: 99px; width: 0%; pointer-events: none; }
+    #pb-handle {
+      position: absolute; top: 50%; transform: translate(-50%, -50%) scale(0.4);
+      width: 14px; height: 14px; border-radius: 50%; background: #fff;
+      left: 0%; opacity: 0; transition: opacity 0.18s, transform 0.18s; pointer-events: none;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.5);
+    }
+    #pb-seekbar:hover #pb-handle { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 
     /* Tab bar (mobile) */
     #tab-bar { flex-shrink: 0; height: var(--tabbar-h); background: var(--surface); border-top: 1px solid var(--border); display: flex; }
@@ -369,9 +376,9 @@
         <div id="pb-artist">—</div>
       </div>
       <div class="pb-controls">
-        <button class="pb-btn" id="pb-prev" title="Previous">⏮</button>
-        <button class="pb-btn" id="pb-playpause" title="Play / Pause">▶</button>
-        <button class="pb-btn" id="pb-next" title="Next">⏭</button>
+        <button class="pb-btn" id="pb-prev" title="Previous"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg></button>
+        <button class="pb-btn" id="pb-playpause" title="Play / Pause"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+        <button class="pb-btn" id="pb-next" title="Next"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
       </div>
     </div>
     <div class="pb-progress-row">
@@ -511,7 +518,9 @@ function onYTState(e) {
   _updatePPBtn();
 }
 function _ytLoad(videoId) { if (ytReady && ytPlayer) ytPlayer.loadVideoById(videoId); }
-function _updatePPBtn() { document.getElementById('pb-playpause').textContent = state.isPlaying ? '⏸' : '▶'; }
+const _ICON_PLAY  = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
+const _ICON_PAUSE = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
+function _updatePPBtn() { document.getElementById('pb-playpause').innerHTML = state.isPlaying ? _ICON_PAUSE : _ICON_PLAY; }
 
 /* -- Progress bar -- */
 let _progressTimer = null;
