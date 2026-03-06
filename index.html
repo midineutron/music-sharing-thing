@@ -89,6 +89,7 @@
     #users-bar::-webkit-scrollbar { display: none; }
     .u-badge { display: flex; align-items: center; gap: 5px; background: var(--surface2); border-radius: 20px; padding: 3px 9px 3px 3px; flex-shrink: 0; white-space: nowrap; }
     .u-badge.me { border: 1.5px solid var(--primary); }
+    .u-badge.offline { opacity: 0.35; }
     .u-avatar { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; }
     .u-name { font-size: 12px; font-weight: 500; }
 
@@ -270,6 +271,36 @@
 
     .sheet-cancel { width: 100%; padding: 14px; border-radius: 12px; background: var(--surface2); font-weight: 600; font-size: 16px; margin-top: 10px; transition: opacity 0.1s; }
     .sheet-cancel:hover { opacity: 0.8; }
+
+    /* ============================================================
+       VOLUME CONTROL
+    ============================================================ */
+    #pb-vol-row {
+      display: flex; align-items: center; gap: 8px; padding: 0 12px 8px;
+    }
+    #pb-vol-icon {
+      width: 30px; height: 30px; border-radius: 7px; display: flex;
+      align-items: center; justify-content: center;
+      color: var(--text-muted); flex-shrink: 0; transition: color 0.1s;
+    }
+    #pb-vol-icon:hover { color: var(--text); }
+    #pb-vol-slider {
+      -webkit-appearance: none; appearance: none; flex: 1;
+      height: 3px; border-radius: 99px; outline: none; cursor: pointer;
+      /* filled portion tracks --vol-pct CSS var, set by JS */
+      background: linear-gradient(to right,
+        var(--primary) 0%, var(--primary) var(--vol-pct, 80%),
+        rgba(255,255,255,0.13) var(--vol-pct, 80%), rgba(255,255,255,0.13) 100%);
+    }
+    #pb-vol-slider::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 13px; height: 13px;
+      border-radius: 50%; background: #fff; cursor: pointer;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+    #pb-vol-slider::-moz-range-thumb {
+      width: 13px; height: 13px; border-radius: 50%; background: #fff;
+      border: none; cursor: pointer;
+    }
 
     /* ============================================================
        PLAYLIST CARD
@@ -475,6 +506,11 @@
     </div>
     <!-- Bandcamp embed (shown instead of progress row for BC tracks) -->
     <div id="pb-bc-row"></div>
+    <!-- Per-user volume (local only, not synced) -->
+    <div id="pb-vol-row">
+      <button id="pb-vol-icon" title="Mute / unmute"></button>
+      <input id="pb-vol-slider" type="range" min="0" max="100" step="1" value="80">
+    </div>
   </div>
 
   <!-- Tab bar (mobile) -->
@@ -597,7 +633,13 @@ window.onYouTubeIframeAPIReady = function () {
     width: 1, height: 1, videoId: '',
     playerVars: { autoplay: 1, playsinline: 1, controls: 0 },
     events: {
-      onReady:       () => { ytReady = true; if (state.currentSong) _ytLoad(state.currentSong.youtubeVideoId); },
+      onReady: () => {
+        ytReady = true;
+        // Apply user's saved volume preference as soon as the player is ready
+        const savedVol = parseInt(localStorage.getItem('musicq_volume') ?? '80', 10);
+        try { ytPlayer.setVolume(isNaN(savedVol) ? 80 : Math.max(0, Math.min(100, savedVol))); } catch (_) {}
+        if (state.currentSong) _ytLoad(state.currentSong.youtubeVideoId);
+      },
       onStateChange: onYTState,
     },
   });
@@ -624,6 +666,9 @@ function _ytLoad(videoId, startSeconds = 0) {
 }
 const _ICON_PLAY  = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
 const _ICON_PAUSE = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
+const _ICON_VOL_HIGH = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
+const _ICON_VOL_LOW  = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.5 12A4.5 4.5 0 0 0 16 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02zM5 9v6h4l5 5V4L9 9H5z"/></svg>`;
+const _ICON_VOL_MUTE = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 12A4.5 4.5 0 0 0 14 7.97v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3 3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4 9.91 6.09 12 8.18V4z"/></svg>`;
 function _updatePPBtn() {
   const btn = document.getElementById('pb-playpause');
   if (state.currentSong?.source === 'bandcamp') {
@@ -818,7 +863,7 @@ async function init() {
 async function createRoom(name) {
   const roomId = genRoomId();
   try {
-    await db.ref(`rooms/${roomId}/users/${state.userId}`).set({ name, joinedAt: SV.TIMESTAMP, lastAddedAt: 0 });
+    await db.ref(`rooms/${roomId}/users/${state.userId}`).set({ name, joinedAt: SV.TIMESTAMP, lastAddedAt: 0, online: true });
     state.roomId = roomId; state.userName = name;
     localStorage.setItem(`musicq_room_${roomId}`, state.userId);
     const u = new URL(location.href);
@@ -834,7 +879,7 @@ async function createRoom(name) {
 
 async function joinRoom(roomId, name) {
   try {
-    await db.ref(`rooms/${roomId}/users/${state.userId}`).set({ name, joinedAt: SV.TIMESTAMP, lastAddedAt: 0 });
+    await db.ref(`rooms/${roomId}/users/${state.userId}`).set({ name, joinedAt: SV.TIMESTAMP, lastAddedAt: 0, online: true });
     state.userName = name;
     localStorage.setItem(`musicq_room_${roomId}`, state.userId);
     enterRoom();
@@ -851,6 +896,12 @@ async function joinRoom(roomId, name) {
 function enterRoom() {
   showScreen('screen-room');
   document.getElementById('share-room-id').textContent = state.roomId;
+
+  // Presence: mark self as online immediately; Firebase auto-marks offline on disconnect
+  const selfRef = db.ref(`rooms/${state.roomId}/users/${state.userId}`);
+  selfRef.update({ online: true });
+  selfRef.onDisconnect().update({ online: false });
+
   setupUsersListener();
   setupQueueListeners();
   setupSyncListener();
@@ -1006,9 +1057,10 @@ function renderUsers() {
   bar.innerHTML = Object.entries(state.users)
     .sort(([,a],[,b]) => (a.joinedAt||0) - (b.joinedAt||0))
     .map(([uid, u]) => {
-      const me = uid === state.userId;
-      const color = uidColor(uid);
-      return `<div class="u-badge${me?' me':''}">
+      const me      = uid === state.userId;
+      const offline = u.online === false;
+      const color   = uidColor(uid);
+      return `<div class="u-badge${me?' me':''}${offline?' offline':''}">
         <div class="u-avatar" style="background:${color}25;color:${color}">${esc(initial(u.name))}</div>
         <span class="u-name">${esc(u.name)}${me?' (you)':''}</span>
       </div>`;
@@ -1262,6 +1314,8 @@ function _loadBandcampEmbed(song) {
   bcRow.innerHTML = `<iframe src="${src}" seamless allow="autoplay"></iframe>`;
   bcRow.style.display = 'block';
   document.getElementById('pb-progress-row').style.display = 'none';
+  // Bandcamp has its own volume control; hide ours to avoid confusion
+  document.getElementById('pb-vol-row').style.display = 'none';
 }
 
 function _clearBandcampEmbed() {
@@ -1269,6 +1323,71 @@ function _clearBandcampEmbed() {
   bcRow.innerHTML = '';
   bcRow.style.display = 'none';
   document.getElementById('pb-progress-row').style.display = '';
+  document.getElementById('pb-vol-row').style.display = '';
+}
+
+/* =============================================================
+   VOLUME CONTROL  (local only — not synced to room)
+============================================================= */
+let _volMuted      = false;
+let _volBeforeMute = 80;
+
+function initVolume() {
+  const slider = document.getElementById('pb-vol-slider');
+  const icon   = document.getElementById('pb-vol-icon');
+
+  // Restore saved volume preference
+  const saved = parseInt(localStorage.getItem('musicq_volume') ?? '80', 10);
+  const vol   = isNaN(saved) ? 80 : Math.max(0, Math.min(100, saved));
+  slider.value      = vol;
+  _volBeforeMute    = vol > 0 ? vol : 80;
+  _volMuted         = (vol === 0);
+  _updateVolIcon(vol);
+  _updateVolSliderFill(vol);
+
+  // Live slider → update player volume + gradient + persist
+  slider.addEventListener('input', () => {
+    const v = parseInt(slider.value, 10);
+    _volMuted      = (v === 0);
+    if (v > 0) _volBeforeMute = v;
+    _applyVolume(v);
+    localStorage.setItem('musicq_volume', String(v));
+  });
+
+  // Mute / unmute button
+  icon.addEventListener('click', () => {
+    if (_volMuted || parseInt(slider.value, 10) === 0) {
+      const restore = _volBeforeMute || 80;
+      slider.value = restore;
+      _volMuted    = false;
+      _applyVolume(restore);
+      localStorage.setItem('musicq_volume', String(restore));
+    } else {
+      _volBeforeMute = parseInt(slider.value, 10);
+      slider.value   = 0;
+      _volMuted      = true;
+      _applyVolume(0);
+      // Persist the pre-mute level so restoring still works after reload
+      localStorage.setItem('musicq_volume', String(_volBeforeMute));
+    }
+  });
+}
+
+function _applyVolume(v) {
+  if (ytReady && ytPlayer) { try { ytPlayer.setVolume(v); } catch (_) {} }
+  _updateVolIcon(v);
+  _updateVolSliderFill(v);
+}
+
+function _updateVolIcon(v) {
+  const icon = document.getElementById('pb-vol-icon');
+  if (!icon) return;
+  icon.innerHTML = v === 0 ? _ICON_VOL_MUTE : (v < 40 ? _ICON_VOL_LOW : _ICON_VOL_HIGH);
+}
+
+function _updateVolSliderFill(v) {
+  const slider = document.getElementById('pb-vol-slider');
+  if (slider) slider.style.setProperty('--vol-pct', v + '%');
 }
 
 /* =============================================================
@@ -1870,6 +1989,9 @@ function bindEvents() {
 
   // Room sync LIVE toggle button
   document.getElementById('room-sync-btn').addEventListener('click', _roomSyncToggle);
+
+  // Volume control
+  initVolume();
 
   // Search
   initSearch();
