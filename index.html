@@ -902,6 +902,14 @@ function enterRoom() {
   selfRef.update({ online: true });
   selfRef.onDisconnect().update({ online: false });
 
+  // Pre-seed the current user so the bar shows immediately (before Firebase fires)
+  state.users[state.userId] = {
+    ...(state.users[state.userId] || {}),
+    name: state.userName,
+    online: true,
+  };
+  renderUsers();
+
   setupUsersListener();
   setupQueueListeners();
   setupSyncListener();
@@ -914,6 +922,8 @@ function setupUsersListener() {
   db.ref(`rooms/${state.roomId}/users`).on('value', snap => {
     state.users = snap.val() || {};
     renderUsers();
+  }, err => {
+    console.error('Users listener denied — check Firebase rules for rooms/$roomId/users:', err.code);
   });
 }
 
