@@ -605,15 +605,23 @@ window.onYouTubeIframeAPIReady = function () {
 
 function onYTState(e) {
   if (e.data === YT.PlayerState.ENDED) { _stopProgress(); advanceQueue(); return; }
+  // If we loaded a sync song into a paused room, pause as soon as YT starts playing
+  if (_syncPauseOnLoad && e.data === YT.PlayerState.PLAYING) {
+    _syncPauseOnLoad = false;
+    try { ytPlayer.pauseVideo(); } catch (_) {}
+    return;
+  }
   state.isPlaying = (e.data === YT.PlayerState.PLAYING);
   if (state.isPlaying) _startProgress(); else _stopProgress();
   _updatePPBtn();
-  // Keep OS lock-screen indicator in sync
   if ('mediaSession' in navigator) {
     navigator.mediaSession.playbackState = state.isPlaying ? 'playing' : 'paused';
   }
 }
-function _ytLoad(videoId) { if (ytReady && ytPlayer) ytPlayer.loadVideoById(videoId); }
+function _ytLoad(videoId, startSeconds = 0) {
+  if (ytReady && ytPlayer)
+    ytPlayer.loadVideoById({ videoId, startSeconds: Math.max(0, startSeconds) });
+}
 const _ICON_PLAY  = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
 const _ICON_PAUSE = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
 function _updatePPBtn() {
@@ -880,8 +888,15 @@ function setupQueueListeners() {
                     = positionAtStart                              [when paused]
 ============================================================= */
 function setupSyncListener() {
+  let firstLoad = true;
   db.ref(`rooms/${state.roomId}/sync`).on('value', snap => {
     state.roomSyncData = snap.val();
+    // Auto-join sync on first snapshot if room already has a song set up
+    if (firstLoad && state.roomSyncData?.song) {
+      state.roomSyncOn = true;
+      _renderSyncBtn();
+    }
+    firstLoad = false;
     if (state.roomSyncOn) _applyRoomSync(state.roomSyncData);
   });
 }
@@ -918,7 +933,7 @@ function _roomSyncSetSong(song) {
     song: clean, playing: true, startedAt: SV.TIMESTAMP, positionAtStart: 0,
   }).catch(console.error);
   // Apply locally without waiting for the roundtrip so it feels instant
-  _syncLoadSong(song, true, 0, 0);
+  _syncLoadSong(song, true, 0);
 }
 
 // Write a play/pause change to the room sync node.
@@ -933,16 +948,15 @@ function _roomSyncSetPlaying(playing) {
 // Apply a Firebase sync snapshot to the local player.
 function _applyRoomSync(sync) {
   if (!sync?.song) return;
-  const song     = sync.song;
-  const newSong  = state.currentSong?.youtubeVideoId !== song.youtubeVideoId
-                || state.currentSong?.bcEmbedSrc      !== song.bcEmbedSrc;
-  const elapsed  = Math.max(0, (Date.now() - (sync.startedAt || Date.now())) / 1000);
+  const elapsed   = Math.max(0, (Date.now() - (sync.startedAt || Date.now())) / 1000);
   const targetPos = (sync.positionAtStart || 0) + (sync.playing ? elapsed : 0);
-  _syncLoadSong(song, sync.playing, newSong ? 0 : targetPos, newSong ? targetPos : 0);
+  _syncLoadSong(sync.song, sync.playing, targetPos);
 }
 
-// Internal: load/seek/play a song for room sync, with optional deferred seek for new loads.
-function _syncLoadSong(song, shouldPlay, immediateSeek, deferredSeek) {
+// Internal: load/seek/play a song for room sync.
+// targetPos — where in the track to be (seconds). For a new song we pass this to
+// loadVideoById so YouTube starts buffering from the right point immediately.
+function _syncLoadSong(song, shouldPlay, targetPos) {
   const newSong = state.currentSong?.youtubeVideoId !== song.youtubeVideoId
                || state.currentSong?.bcEmbedSrc      !== song.bcEmbedSrc;
 
@@ -956,35 +970,33 @@ function _syncLoadSong(song, shouldPlay, immediateSeek, deferredSeek) {
 
   if (song.source === 'bandcamp') {
     if (newSong) { _clearBandcampEmbed(); _loadBandcampEmbed(song); }
-    state.isPlaying = true; _updatePPBtn(); renderQueues(); return;
+    state.isPlaying = shouldPlay; _updatePPBtn(); renderQueues(); return;
   }
 
   _clearBandcampEmbed();
-  if (newSong) {
-    _ytLoad(song.youtubeVideoId);
-    // Seek to correct position once YouTube has buffered enough (~1.5 s)
-    if (deferredSeek > 2) {
-      const capturedSeek = deferredSeek, capturedPlay = shouldPlay;
-      setTimeout(() => {
-        try { if (ytReady && ytPlayer) { ytPlayer.seekTo(capturedSeek, true); if (!capturedPlay) ytPlayer.pauseVideo(); } } catch (_) {}
-      }, 1500);
-    }
-  } else {
-    // Same song — correct drift if > 4 s off
-    try {
-      if (ytReady && ytPlayer) {
-        if (immediateSeek > 0 && Math.abs((ytPlayer.getCurrentTime() || 0) - immediateSeek) > 4)
-          ytPlayer.seekTo(immediateSeek, true);
+  try {
+    if (ytReady && ytPlayer) {
+      if (newSong) {
+        // loadVideoById with startSeconds jumps straight to the right position —
+        // no need for a setTimeout seek after the fact.
+        _ytLoad(song.youtubeVideoId, targetPos);
+        // If the room is paused, pause once the player fires PLAYING (via onYTState hook)
+        if (!shouldPlay) _syncPauseOnLoad = true;
+      } else {
+        // Same video — fix drift if > 4 s out of sync
+        if (Math.abs((ytPlayer.getCurrentTime() || 0) - targetPos) > 4)
+          ytPlayer.seekTo(targetPos, true);
         if (shouldPlay) ytPlayer.playVideo(); else ytPlayer.pauseVideo();
       }
-    } catch (_) {}
-  }
+    }
+  } catch (_) {}
 
   state.isPlaying = shouldPlay;
   if (state.isPlaying) _startProgress(); else _stopProgress();
   _updatePPBtn();
   renderQueues();
 }
+let _syncPauseOnLoad = false; // flag: pause as soon as the new video starts
 
 /* =============================================================
    RENDER USERS
@@ -1845,14 +1857,13 @@ function bindEvents() {
   // Player controls
   document.getElementById('pb-playpause').addEventListener('click', () => {
     if (!ytReady || !ytPlayer) return;
-    if (state.roomSyncOn) {
-      // Broadcast play/pause to the whole room
-      _roomSyncSetPlaying(!state.isPlaying);
-    } else {
-      if (state.isPlaying) { ytPlayer.pauseVideo(); state.isPlaying = false; }
-      else                 { ytPlayer.playVideo();  state.isPlaying = true;  }
-      _updatePPBtn();
-    }
+    const nowPlaying = !state.isPlaying;
+    // Always apply locally immediately — never wait for a Firebase roundtrip
+    if (nowPlaying) { ytPlayer.playVideo();  state.isPlaying = true;  }
+    else            { ytPlayer.pauseVideo(); state.isPlaying = false; }
+    _updatePPBtn();
+    // If in sync mode, also broadcast the change to every other listener
+    if (state.roomSyncOn) _roomSyncSetPlaying(nowPlaying);
   });
   document.getElementById('pb-prev').addEventListener('click', _prevSong);
   document.getElementById('pb-next').addEventListener('click', advanceQueue);
