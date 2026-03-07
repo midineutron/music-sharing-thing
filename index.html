@@ -137,11 +137,16 @@
     #pb-fill { height: 100%; background: var(--primary); border-radius: 99px; width: 0%; pointer-events: none; }
     #pb-handle {
       position: absolute; top: 50%; transform: translate(-50%, -50%) scale(0.4);
-      width: 14px; height: 14px; border-radius: 50%; background: #fff;
+      width: 16px; height: 16px; border-radius: 50%; background: #fff;
       left: 0%; opacity: 0; transition: opacity 0.18s, transform 0.18s; pointer-events: none;
       box-shadow: 0 1px 5px rgba(0,0,0,0.5);
     }
     #pb-seekbar:hover #pb-handle { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    /* Touch: always show handle and thicker track — hover state never fires */
+    @media (hover: none) {
+      #pb-seekbar-track { height: 4px; }
+      #pb-handle { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    }
 
     /* Bandcamp embed row (replaces progress row when a BC track is playing) */
     #pb-bc-row { display: none; padding: 0 12px 4px; }
@@ -220,6 +225,12 @@
     .song-thumb { width: 54px; height: 40px; object-fit: cover; border-radius: 5px; background: var(--surface2); }
     .play-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; border-radius: 5px; font-size: 14px; opacity: 0; transition: opacity 0.15s; }
     .song-card:hover .play-overlay { opacity: 1; }
+    /* Touch devices: hover never fires, so always show the overlay faintly
+       and go full opacity on active (finger-down) state */
+    @media (hover: none) {
+      .play-overlay { opacity: 0.7; }
+      .st-wrap:active .play-overlay { opacity: 1; }
+    }
     .now-dot { position: absolute; bottom: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--primary); }
     .song-info { flex: 1; min-width: 0; }
     .song-title { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
@@ -522,7 +533,10 @@
 </div><!-- /screen-room -->
 
 <!-- Hidden YouTube player (always in DOM) -->
-<div id="yt-wrap" style="position:fixed;width:1px;height:1px;overflow:hidden;bottom:0;right:0;z-index:-1;opacity:0">
+<!-- iOS Safari will not grant audio session to elements with opacity:0.
+     Use clip-path:inset(0) instead to visually hide while keeping the element
+     "rendered" from the browser's perspective, preserving audio session access. -->
+<div id="yt-wrap" style="position:fixed;width:2px;height:2px;bottom:0;right:0;pointer-events:none;clip-path:inset(0)">
   <div id="yt-player"></div>
 </div>
 
@@ -630,7 +644,7 @@ let ytReady  = false;
 
 window.onYouTubeIframeAPIReady = function () {
   ytPlayer = new YT.Player('yt-player', {
-    width: 1, height: 1, videoId: '',
+    width: 2, height: 2, videoId: '',
     playerVars: { autoplay: 1, playsinline: 1, controls: 0 },
     events: {
       onReady: () => {
@@ -1977,7 +1991,11 @@ function bindEvents() {
     document.getElementById('pb-time-cur').textContent = _fmt(pct * dur);
   }
   seekbar.addEventListener('click', _seek);
-  // Touch seek support
+  // Touch seek support — touchstart handles taps, touchmove handles scrubbing
+  seekbar.addEventListener('touchstart', e => {
+    e.preventDefault();
+    _seek(e.touches[0]);
+  }, { passive: false });
   seekbar.addEventListener('touchmove', e => {
     e.preventDefault();
     _seek(e.touches[0]);
