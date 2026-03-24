@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vocal Isolator</title>
+<style>
+  :root {
+    --bg:         #111113;
+    --surface:    #1c1c1e;
+    --surface2:   #2c2c2e;
+    --primary:    #30d158;
+    --text:       #f2f2f7;
+    --text-muted: #8e8e93;
+    --border:     #3a3a3c;
+    --danger:     #ff453a;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  header h1 {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--primary);
+  }
+
+  header p {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 24px;
+    gap: 20px;
+  }
+
+  @media (max-width: 768px) {
+    .main { grid-template-columns: 1fr; padding: 16px; }
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .panel-header .count {
+    background: var(--surface2);
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+
+  /* Search */
+  .search-bar {
+    padding: 14px 16px;
+    display: flex;
+    gap: 8px;
+  }
+
+  input[type="text"] {
+    flex: 1;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
+    padding: 9px 14px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  input[type="text"]:focus { border-color: var(--primary); }
+
+  button {
+    background: var(--primary);
+    color: #000;
+    border: none;
+    border-radius: 10px;
+    font: inherit;
+    font-weight: 700;
+    font-size: 14px;
+    padding: 9px 18px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+  }
+
+  button:disabled { opacity: 0.35; cursor: default; }
+  button:not(:disabled):hover { opacity: 0.85; }
+
+  button.danger {
+    background: var(--danger);
+    color: #fff;
+  }
+
+  button.ghost {
+    background: var(--surface2);
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* Result / queue list */
+  .scroll-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 8px 12px;
+  }
+
+  .scroll-list::-webkit-scrollbar { width: 4px; }
+  .scroll-list::-webkit-scrollbar-track { background: transparent; }
+  .scroll-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .video-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    transition: background 0.1s;
+  }
+
+  .video-row:hover { background: var(--surface2); }
+
+  .video-row img {
+    width: 80px;
+    height: 45px;
+    object-fit: cover;
+    border-radius: 6px;
+    flex-shrink: 0;
+    background: var(--surface2);
+  }
+
+  .video-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .video-title {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .video-channel {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .row-action {
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: background 0.1s, color 0.1s;
+  }
+
+  .btn-add {
+    background: var(--primary);
+    color: #000;
+    padding: 0;
+  }
+
+  .btn-add.added {
+    background: var(--surface2);
+    color: var(--text-muted);
+    cursor: default;
+  }
+
+  .btn-remove {
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 16px;
+  }
+
+  .btn-remove:hover { background: var(--danger); color: #fff; }
+
+  /* Empty states */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 48px 20px;
+    color: var(--text-muted);
+    font-size: 13px;
+    text-align: center;
+  }
+
+  .empty-state .icon { font-size: 36px; }
+
+  /* Queue panel bottom */
+  .queue-footer {
+    padding: 14px 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  .btn-process {
+    width: 100%;
+    padding: 12px;
+    font-size: 15px;
+    border-radius: 12px;
+  }
+
+  /* Progress view */
+  .progress-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 8px;
+  }
+
+  .progress-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 10px;
+    border-radius: 10px;
+    margin-bottom: 4px;
+  }
+
+  .progress-row img {
+    width: 64px;
+    height: 36px;
+    object-fit: cover;
+    border-radius: 5px;
+    flex-shrink: 0;
+    background: var(--surface2);
+  }
+
+  .progress-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .progress-title {
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 5px;
+  }
+
+  .step-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    height: 14px;
+  }
+
+  .progress-bar-track {
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.4s ease;
+  }
+
+  .progress-bar-fill.indeterminate {
+    width: 40% !important;
+    animation: slide 1.2s ease-in-out infinite;
+  }
+
+  @keyframes slide {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(350%); }
+  }
+
+  .progress-status-icon {
+    flex-shrink: 0;
+    font-size: 18px;
+    padding-top: 2px;
+  }
+
+  /* Done banner */
+  .done-banner {
+    margin: 12px 16px;
+    padding: 14px 16px;
+    background: color-mix(in srgb, var(--primary) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--primary) 40%, transparent);
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary);
+    text-align: center;
+  }
+
+  .error-banner {
+    margin: 12px 16px;
+    padding: 14px 16px;
+    background: color-mix(in srgb, var(--danger) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent);
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--danger);
+    text-align: center;
+  }
+
+  .hidden { display: none !important; }
+
+  /* Loading spinner for search */
+  .search-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    margin: auto;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Vocal Isolator</h1>
+  <p>Search YouTube, build a list, download isolated vocals</p>
+</header>
+
+<div class="main">
+  <!-- LEFT: Search -->
+  <div class="panel" id="search-panel">
+    <div class="panel-header">Search YouTube</div>
+    <div class="search-bar">
+      <input type="text" id="search-input" placeholder="Artist, song, or URL…" autocomplete="off">
+      <button id="search-btn" onclick="handleSearch()">Search</button>
+    </div>
+    <div class="scroll-list" id="results-list">
+      <div class="empty-state">
+        <span class="icon">🔍</span>
+        <span>Search for a track above</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Queue / Progress -->
+  <div class="panel" id="queue-panel">
+    <!-- Queue view -->
+    <div id="queue-view">
+      <div class="panel-header">
+        Queue
+        <span class="count" id="queue-count">0</span>
+      </div>
+      <div class="scroll-list" id="queue-list">
+        <div class="empty-state" id="queue-empty">
+          <span class="icon">🎵</span>
+          <span>Add videos from search results</span>
+        </div>
+      </div>
+      <div class="queue-footer">
+        <button class="btn-process" id="process-btn" disabled onclick="startProcessing()">
+          Process &amp; Download
+        </button>
+      </div>
+    </div>
+
+    <!-- Progress view (hidden until job starts) -->
+    <div id="progress-view" class="hidden">
+      <div class="panel-header">Processing…</div>
+      <div class="progress-list" id="progress-list"></div>
+      <div id="done-banner" class="hidden"></div>
+      <div class="queue-footer hidden" id="progress-footer">
+        <button class="ghost btn-process" onclick="resetApp()">Start Over</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const state = {
+  queue: [],      // [{id, title, channel, thumbnail}]
+  jobId: null,
+  processing: false,
+};
+
+// ── Search ─────────────────────────────────────────────────────────────────
+
+const searchInput = document.getElementById('search-input');
+searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleSearch(); });
+
+async function handleSearch() {
+  const q = searchInput.value.trim();
+  if (!q) return;
+
+  const list = document.getElementById('results-list');
+  list.innerHTML = '<div class="loading-row"><span class="search-spinner"></span></div>';
+  document.getElementById('search-btn').disabled = true;
+
+  try {
+    const res = await fetch(`/search?q=${encodeURIComponent(q)}`);
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    renderResults(data.results);
+  } catch (err) {
+    list.innerHTML = `<div class="empty-state"><span class="icon">⚠️</span><span>${escHtml(err.message)}</span></div>`;
+  } finally {
+    document.getElementById('search-btn').disabled = false;
+  }
+}
+
+function renderResults(items) {
+  const list = document.getElementById('results-list');
+  if (!items.length) {
+    list.innerHTML = '<div class="empty-state"><span class="icon">😔</span><span>No results found</span></div>';
+    return;
+  }
+  list.innerHTML = items.map(v => {
+    const inQueue = state.queue.some(q => q.id === v.id);
+    return `
+      <div class="video-row" id="result-${escAttr(v.id)}">
+        <img src="${escAttr(v.thumbnail)}" alt="" loading="lazy">
+        <div class="video-info">
+          <div class="video-title">${escHtml(v.title)}</div>
+          <div class="video-channel">${escHtml(v.channel)}</div>
+        </div>
+        <button class="row-action btn-add ${inQueue ? 'added' : ''}"
+                onclick="toggleAdd(${JSON.stringify(v)})"
+                title="${inQueue ? 'Already added' : 'Add to queue'}">
+          ${inQueue ? '✓' : '+'}
+        </button>
+      </div>`;
+  }).join('');
+}
+
+function toggleAdd(video) {
+  if (state.queue.some(q => q.id === video.id)) return;
+  addToQueue(video);
+  // Update add button in results
+  const btn = document.querySelector(`#result-${CSS.escape(video.id)} .btn-add`);
+  if (btn) { btn.classList.add('added'); btn.textContent = '✓'; }
+}
+
+// ── Queue ──────────────────────────────────────────────────────────────────
+
+function addToQueue(video) {
+  state.queue.push(video);
+  renderQueue();
+}
+
+function removeFromQueue(id) {
+  state.queue = state.queue.filter(v => v.id !== id);
+  renderQueue();
+  // Reset add button in results if visible
+  const btn = document.querySelector(`#result-${CSS.escape(id)} .btn-add`);
+  if (btn) { btn.classList.remove('added'); btn.textContent = '+'; }
+}
+
+function renderQueue() {
+  const list = document.getElementById('queue-list');
+  const count = document.getElementById('queue-count');
+  const processBtn = document.getElementById('process-btn');
+  const empty = document.getElementById('queue-empty');
+
+  count.textContent = state.queue.length;
+  processBtn.disabled = state.queue.length === 0 || state.processing;
+
+  if (!state.queue.length) {
+    list.innerHTML = '';
+    list.appendChild(empty);
+    empty.classList.remove('hidden');
+    return;
+  }
+
+  empty.classList.add('hidden');
+  list.innerHTML = state.queue.map(v => `
+    <div class="video-row">
+      <img src="${escAttr(v.thumbnail)}" alt="" loading="lazy">
+      <div class="video-info">
+        <div class="video-title">${escHtml(v.title)}</div>
+        <div class="video-channel">${escHtml(v.channel)}</div>
+      </div>
+      <button class="row-action btn-remove" onclick="removeFromQueue('${escAttr(v.id)}')" title="Remove">×</button>
+    </div>`).join('');
+}
+
+// ── Processing ─────────────────────────────────────────────────────────────
+
+async function startProcessing() {
+  if (!state.queue.length || state.processing) return;
+  state.processing = true;
+
+  // Switch to progress view
+  document.getElementById('queue-view').classList.add('hidden');
+  document.getElementById('progress-view').classList.remove('hidden');
+  buildProgressRows();
+
+  try {
+    const res = await fetch('/jobs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ videos: state.queue.map(v => ({ id: v.id, title: v.title })) }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const { job_id } = await res.json();
+    state.jobId = job_id;
+    openProgressSSE(job_id);
+  } catch (err) {
+    showBanner('error', `Failed to start job: ${err.message}`);
+    state.processing = false;
+  }
+}
+
+function buildProgressRows() {
+  const list = document.getElementById('progress-list');
+  list.innerHTML = state.queue.map(v => `
+    <div class="progress-row" id="prog-${escAttr(v.id)}">
+      <img src="${escAttr(v.thumbnail)}" alt="" loading="lazy">
+      <div class="progress-info">
+        <div class="progress-title">${escHtml(v.title)}</div>
+        <div class="step-label" id="step-${escAttr(v.id)}">Waiting…</div>
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" id="bar-${escAttr(v.id)}"></div>
+        </div>
+      </div>
+      <div class="progress-status-icon" id="icon-${escAttr(v.id)}">⏳</div>
+    </div>`).join('');
+}
+
+function openProgressSSE(jobId) {
+  const es = new EventSource(`/jobs/${jobId}/progress`);
+
+  es.onmessage = e => {
+    let event;
+    try { event = JSON.parse(e.data); } catch { return; }
+    updateProgressUI(event);
+    if (event.final) {
+      es.close();
+      if (event.step === 'complete') {
+        showBanner('done', '✓ Done! Your download should start automatically.');
+        triggerDownload(jobId);
+        document.getElementById('progress-footer').classList.remove('hidden');
+      } else {
+        showBanner('error', `Error: ${event.message || 'Unknown error'}`);
+        document.getElementById('progress-footer').classList.remove('hidden');
+        state.processing = false;
+      }
+    }
+  };
+
+  es.onerror = () => {
+    es.close();
+    showBanner('error', 'Connection lost. Check server logs.');
+    document.getElementById('progress-footer').classList.remove('hidden');
+    state.processing = false;
+  };
+}
+
+function updateProgressUI(event) {
+  if (!event.videoId) return;
+  const id = event.videoId;
+  const stepEl  = document.getElementById(`step-${id}`);
+  const barEl   = document.getElementById(`bar-${id}`);
+  const iconEl  = document.getElementById(`icon-${id}`);
+  if (!stepEl) return;
+
+  if (event.step === 'downloading') {
+    stepEl.textContent = 'Downloading audio…';
+    iconEl.textContent = '⬇️';
+    if (event.progress === 0) {
+      barEl.classList.add('indeterminate');
+    } else {
+      barEl.classList.remove('indeterminate');
+      barEl.style.width = '50%';
+    }
+  } else if (event.step === 'isolating') {
+    stepEl.textContent = 'Isolating vocals…';
+    iconEl.textContent = '🎤';
+    barEl.classList.remove('indeterminate');
+    if (event.progress === 0) {
+      barEl.style.width = '50%';
+      barEl.classList.add('indeterminate');
+    } else {
+      barEl.classList.remove('indeterminate');
+      barEl.style.width = '95%';
+    }
+  } else if (event.step === 'done') {
+    stepEl.textContent = 'Done';
+    iconEl.textContent = '✅';
+    barEl.classList.remove('indeterminate');
+    barEl.style.width = '100%';
+  } else if (event.step === 'error') {
+    stepEl.textContent = event.message || 'Error';
+    iconEl.textContent = '❌';
+    barEl.classList.remove('indeterminate');
+    barEl.style.background = 'var(--danger)';
+  }
+}
+
+function triggerDownload(jobId) {
+  const a = document.createElement('a');
+  a.href = `/jobs/${jobId}/download`;
+  a.download = '';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function showBanner(type, msg) {
+  const el = document.getElementById('done-banner');
+  el.className = type === 'done' ? 'done-banner' : 'error-banner';
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
+function resetApp() {
+  state.queue = [];
+  state.jobId = null;
+  state.processing = false;
+  document.getElementById('progress-view').classList.add('hidden');
+  document.getElementById('done-banner').classList.add('hidden');
+  document.getElementById('progress-footer').classList.add('hidden');
+  document.getElementById('queue-view').classList.remove('hidden');
+  renderQueue();
+}
+
+// ── Utils ──────────────────────────────────────────────────────────────────
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function escAttr(str) {
+  return String(str).replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+</script>
+</body>
+</html>
